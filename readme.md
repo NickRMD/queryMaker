@@ -1,4 +1,4 @@
-# QueryMaker
+# SimpleQueryMaker (SQM)
 QueryMaker is a simple tool to help you create SQL queries quickly and easily. It provides a user-friendly interface to build queries without needing to write SQL code manually.
 
 You don't have to rely on an ORM (Object-Relational Mapping) library to interact with your database. Instead, you can use QueryMaker to generate SQL queries that you can execute directly against your database.
