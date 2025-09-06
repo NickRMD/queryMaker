@@ -1,0 +1,390 @@
+
+/*
+  * Defines the statement kind for combining statements.
+  * 'AND' and 'OR' are the two possible kinds.
+  */
+export type StatementKind = 'AND' | 'OR';
+
+/*
+  * A class to build SQL WHERE clauses with parameterized queries.
+  * It supports various SQL conditions and allows combining multiple statements.
+  * It ensures that the generated SQL is safe from injection attacks by using placeholders.
+  * It can also handle nested statements and subqueries.
+  */
+export default class Statement {
+  /*
+    * The current index for parameter placeholders.
+    */
+  private index: number;
+  /*
+    * Array to hold individual unparsed SQL statements.
+    * These statements will be combined to form the final SQL clause.
+    */
+  private statements: string[] = [];
+  /*
+    * The final parsed SQL statement with placeholders.
+    * This is generated when the build method is called.
+    */
+  private parsedStatement: string | null = null;
+  /*
+    * Array to hold the values corresponding to the placeholders in the SQL statement.
+    * These values will be used in the parameterized query execution.
+    */
+  private values: any[] = [];
+  /*
+    * Flag to determine if the final statement should include the 'WHERE' keyword.
+    * This is useful when the statement is part of a larger SQL query.
+    */
+  private addWhere = true;
+
+  constructor(initialOffset = 0) {
+    this.index = 1 + initialOffset;
+  }
+
+  /*
+    * Adds multiple parameters to the values array and updates the index accordingly.
+    * This is useful when you have a list of values to be used in the SQL statement.
+    */
+  public addParams(params: any[]) {
+    this.values = [...params, ...this.values];
+    this.index += params.length;
+    return this;
+  }
+
+  /*
+    * Adds an offset to the current index.
+    * This is useful when you want to adjust the starting point for parameter placeholders.
+    */
+  public addOffset(offset: number) {
+    this.index += offset;
+    return this;
+  }
+
+  /*
+    * Enables the addition of the 'WHERE' keyword in the final SQL statement.
+    * This is useful when the statement is a standalone WHERE clause.
+    */
+  public enableWhere() {
+    this.addWhere = true;
+  }
+
+  /*
+    * Disables the addition of the 'WHERE' keyword in the final SQL statement.
+    * This is useful when the statement is part of a larger SQL query that already includes 'WHERE'.
+    */
+  public disableWhere() {
+    this.addWhere = false;
+  }
+
+  private static countPlaceholders(template: string) {
+    return (template.match(/\?/g) || []).length;
+  }
+
+  /*
+    * Invalidates the current parsed statement.
+    * This forces a re-parse the next time the build method is called.
+    */
+  public invalidate() {
+    this.parsedStatement = null;
+  }
+
+  /*
+    * Resets the statement to its initial state.
+    * This clears all collected statements, values, and resets the index.
+    * It also re-enables the addition of the 'WHERE' keyword.
+    */
+  public reset() {
+    this.statements = [];
+    this.parsedStatement = null;
+    this.values = [];
+    this.index = 1;
+    this.addWhere = true;
+  }
+
+  /*
+    * Adds a new SQL statement to the list of statements.
+    * It handles both string statements and nested Statement instances.
+    * It also manages the values associated with the statement and the logical kind (AND/OR).
+    */
+  private addStatement(
+    statement: string | Statement,
+    values: any | any[] = [],
+    kind: StatementKind | string = 'AND'
+  ) {
+    if (statement instanceof Statement) {
+      const raw = statement.returnRaw();
+      statement = raw.statement;
+      values = raw.values;
+    }
+
+    values = Array.isArray(values) ? values : [values];
+
+    if(Statement.countPlaceholders(statement) !== values.length) {
+      throw new Error('Number of placeholders does not match number of values');
+    }
+
+    if (this.statements.length === 0) {
+      this.statements.push(`(${statement})`);
+    } else {
+      this.statements.push(`${kind} (${statement})`);
+    }
+    this.values.push(...values); 
+  }
+
+  /*
+    * Adds a new statement combined with 'AND'.
+    */
+  public and(
+    statement: string | Statement,
+    values: any | any[] = []
+  ) {
+    this.addStatement(statement, values, 'AND');
+    return this;
+  }
+
+  /*
+    * Adds a new statement combined with 'OR'.
+    */
+  public or(
+    statement: string | Statement,
+    values: any | any[] = []
+  ) {
+    this.addStatement(statement, values, 'OR');
+    return this;
+  }
+
+  /*
+    * Adds an equality condition to the statement.
+    */
+  public in(
+    column: string,
+    values: any[],
+    kind: StatementKind = 'AND'
+  ) {
+    const placeholders = values.map(() => '?').join(', ');
+    this.addStatement(`${column} IN (${placeholders})`, values, kind);
+    return this;
+  }
+
+  /*
+    * Adds a NOT IN condition to the statement.
+    */
+  public notIn(column: string, values: any[], kind: StatementKind = 'AND') {
+    const placeholders = values.map(() => '?').join(', ');
+    this.addStatement(`${column} NOT IN (${placeholders})`, values, kind);
+    return this;
+  }
+
+  /*
+    * Adds an equality condition to the statement.
+    * Especially useful for simple date or string comparisons.
+    */
+  public between(
+    column: string,
+    start: any,
+    end: any,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} BETWEEN ? AND ?`, [start, end], kind);
+    return this;
+  }
+
+  /*
+    * Adds a NOT BETWEEN condition to the statement.
+    */
+  public isNull(
+    column: string,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} IS NULL`, [], kind);
+    return this;
+  }
+
+  /*
+    * Adds an IS NOT NULL condition to the statement.
+    */
+  public isNotNull(
+    column: string,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} IS NOT NULL`, [], kind);
+    return this;
+  }
+
+  /*
+    * Adds an equality condition to the statement.
+    */
+  public like(
+    column: string,
+    pattern: string,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} LIKE ?`, [pattern], kind);
+    return this;
+  }
+
+  /*
+    * Adds a case-insensitive LIKE condition to the statement.
+    */
+  public ilike(
+    column: string,
+    pattern: string,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} ILIKE ?`, [pattern], kind);
+    return this;
+  }
+
+  /*
+    * Adds a NOT LIKE condition to the statement.
+    */
+  public notLike(
+    column: string,
+    pattern: string,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} NOT LIKE ?`, [pattern], kind);
+    return this;
+  }
+
+  /*
+    * Adds a case-insensitive NOT LIKE condition to the statement.
+    */
+  public notILike(
+    column: string,
+    pattern: string,
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`${column} NOT ILIKE ?`, [pattern], kind);
+    return this;
+  }
+
+  /*
+    * Adds an EXISTS condition with a subquery to the statement.
+    */
+  public exists(
+    subquery: string,
+    values: any | any[] = [],
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`EXISTS (${subquery})`, values, kind);
+    return this;
+  }
+
+  /*
+    * Adds a NOT EXISTS condition with a subquery to the statement.
+    */
+  public notExists(
+    subquery: string,
+    values: any | any[] = [],
+    kind: StatementKind = 'AND'
+  ) {
+    this.addStatement(`NOT EXISTS (${subquery})`, values, kind);
+    return this;
+  }
+
+  /*
+    * Adds a raw SQL statement with placeholders to the statement list.
+    * This allows for custom SQL conditions that may not be covered by the predefined methods.
+    */
+  public raw(
+    kind: StatementKind | string,
+    template: string,
+    ...values: any[]
+  ) {
+    const parts = template.split('?');
+    let statement = '';
+
+    if (parts.length !== values.length + 1) {
+      throw new Error('Number of placeholders does not match number of values');
+    }
+
+    for (let i = 0; i < values.length; i++) {
+      statement += parts[i] + '?';
+    }
+    statement += parts[parts.length - 1];
+
+    this.addStatement(statement, values, kind);
+    return this;
+  }
+
+  /*
+    * Joins multiple Statement instances into the current statement.
+    * This allows for complex nested conditions to be built up from smaller parts.
+    */
+  public joinMultipleStatements(
+    statements: Statement[],
+    joinWith: StatementKind = 'AND'
+  ) {
+    statements.forEach((stmt) => {
+      const raw = stmt.returnRaw();
+      this.addStatement(raw.statement, raw.values, joinWith);
+    });
+
+    return this;
+  }
+
+  /*
+    * Checks if the statements have already been parsed.
+    * This prevents re-parsing and ensures that the final SQL is only generated once.
+    */
+  public hasParsed() {
+    return this.parsedStatement !== null;
+  }
+
+  /*
+    * Parses the collected statements into a single SQL string with placeholders.
+    * It also adds the 'WHERE' keyword if required.
+    */
+  private parseStatements(newLine = true) {
+    if (this.hasParsed()) {
+      return this.parsedStatement as string;
+    }
+
+    if (this.statements.length === 0) {
+      this.parsedStatement = '';
+      return this.parsedStatement;
+    }
+    let separator = newLine ? '\n ' : ' ';
+    let index = this.index;
+    let statement = this.statements.join(separator).replace(/\?/g, () => `$${index++}`);
+    this.parsedStatement = this.addWhere ? `WHERE ${statement}` : statement;
+    return this.parsedStatement;
+  }
+
+  /*
+    * Builds the final SQL statement and the corresponding values array.
+    * This is the method to call when the statement is complete and ready for execution.
+    */
+  public build(newLine = true) {
+    return {
+      statement: this.parseStatements(newLine),
+      values: this.values
+    }
+  }
+
+  public get params() {
+    return this.values;
+  }
+
+  public clone(): Statement {
+    const clone = new Statement(this.index - 1);
+    clone.statements = [...this.statements];
+    clone.parsedStatement = this.parsedStatement;
+    clone.values = [...this.values];
+    clone.addWhere = this.addWhere;
+    return clone;
+  }
+
+  /*
+    * Returns the raw SQL statement and values without parsing.
+    * This is useful for debugging or when the raw format is needed.
+    */
+  private returnRaw() {
+    const statement = this.statements.join('\n ');
+    return {
+      statement: statement,
+      values: this.values
+    }
+  }
+}

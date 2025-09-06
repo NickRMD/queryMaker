@@ -1,0 +1,29 @@
+{
+  "name": "queryMakerLibrary",
+  "version": "0.1.0",
+  "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "query",
+    "maker",
+    "library",
+    "sql",
+    "select",
+    "insert",
+    "update",
+    "delete",
+    "postgres"
+  ],
+  "author": "Nicolas R. M. Dias <nicolasrenanmachado@gmail.com>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
