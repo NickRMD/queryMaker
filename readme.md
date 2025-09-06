@@ -17,7 +17,7 @@ You don't have to rely on an ORM (Object-Relational Mapping) library to interact
 You can install QueryMaker via npm:
 
 ```bash
-my-project$ npm install querymaker
+my-project$ npm install sqm
 ```
 
 ## Usage
