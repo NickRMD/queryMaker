@@ -10,6 +10,7 @@ export default class SelectQuery extends QueryDefinition {
   private distinctSelect: boolean = false;
   private selectFields: string[];
   private whereStatement: Statement | null = null;
+  private havingStatement: Statement | null = null;
   private joins: Join[] = [];
   private orderBys: OrderBy[] = [];
   private limitCount: number | null = null;
@@ -94,6 +95,20 @@ export default class SelectQuery extends QueryDefinition {
     return this.where(newStmt);
   }
 
+  public having(statement: Statement | string, ...values: any[]): this {
+    if (typeof statement === 'string') {
+      statement = new Statement().raw('', statement, ...values);
+    }
+    
+    this.havingStatement = statement;
+    return this;
+  }
+
+  public useHavingStatement(statement: (stmt: Statement) => Statement): this {
+    const newStmt = statement(new Statement());
+    return this.having(newStmt);
+  }
+
   public join(
     join: Join | Join[] 
   ): this {
@@ -117,16 +132,30 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   public limit(count: number): this {
+    if (typeof count !== 'number' || count < 0 || !Number.isInteger(count)) {
+      throw new Error("Limit must be a non-negative integer.");
+    }
     this.limitCount = count;
     return this;
   }
 
   public offset(count: number): this {
+    if (typeof count !== 'number' || count < 0 || !Number.isInteger(count)) {
+      throw new Error("Offset must be a non-negative integer.");
+    }
     this.offsetCount = count;
     return this;
   }
 
   public limitAndOffset(limit: number, offset: number): this {
+    if (typeof limit !== 'number' || limit < 0 || !Number.isInteger(limit)) {
+      throw new Error("Limit must be a non-negative integer.");
+    }
+
+    if (typeof offset !== 'number' || offset < 0 || !Number.isInteger(offset)) {
+      throw new Error("Offset must be a non-negative integer.");
+    }
+
     this.limitCount = limit;
     this.offsetCount = offset;
     return this;
@@ -149,6 +178,11 @@ export default class SelectQuery extends QueryDefinition {
     this.limitCount = null;
     this.offsetCount = null;
     this.groupBys = [];
+    this.groupBySelectFields = false;
+    this.builtQuery = null;
+    this.ctes = null;
+    this.havingStatement = null;
+    this.disabledAnalysis = false;
   }
 
   public groupBy(fields: string | string[]): this {
@@ -372,6 +406,15 @@ export default class SelectQuery extends QueryDefinition {
       groupByClause = `GROUP BY ${this.selectFields.join(', ')}`;
     }
 
+    let havingClause = '';
+    if (this.havingStatement) {
+      this.havingStatement.disableWhere();
+      this.havingStatement.addOffset(values.length);
+      const havingStmt = this.havingStatement.build();
+      havingClause = `HAVING ${havingStmt.statement}`;
+      values.push(...havingStmt.values);
+    }
+
     let orderByClause = '';
     if (this.orderBys.length > 0) {
       const orders = this.orderBys.map(ob => `${ob.field} ${ob.direction}`);
@@ -392,6 +435,7 @@ export default class SelectQuery extends QueryDefinition {
       joinClauses,
       whereClause,
       groupByClause,
+      havingClause,
       orderByClause,
       `${limitClause} ${offsetClause}`
     ].map(q => q.trim() ? q : null)
