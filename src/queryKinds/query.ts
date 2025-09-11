@@ -37,17 +37,17 @@ export default abstract class QueryDefinition {
       return queryExecutor(this.toSQL(), this.getParams());
     }
 
-    if (!noManager && queryExecutor.manager && typeof queryExecutor.manager === 'object') {
+    if (!noManager && queryExecutor?.manager && typeof queryExecutor?.manager === 'object') {
       return this.execute(queryExecutor.manager);
-    } else if (queryExecutor.execute && typeof queryExecutor.execute === 'function') {
+    } else if (queryExecutor?.execute && typeof queryExecutor?.execute === 'function') {
       return queryExecutor.execute(this.toSQL(), this.getParams());
-    } else if (queryExecutor.query && typeof queryExecutor.query === 'function') {
+    } else if (queryExecutor?.query && typeof queryExecutor?.query === 'function') {
       return queryExecutor.query(this.toSQL(), this.getParams());
-    } else if (queryExecutor.run && typeof queryExecutor.run === 'function') {
+    } else if (queryExecutor?.run && typeof queryExecutor?.run === 'function') {
       return queryExecutor.run(this.toSQL(), this.getParams());
-    } else if (queryExecutor.all && typeof queryExecutor.all === 'function') {
+    } else if (queryExecutor?.all && typeof queryExecutor?.all === 'function') {
       return queryExecutor.all(this.toSQL(), this.getParams());
-    } else if (queryExecutor.get && typeof queryExecutor.get === 'function') {
+    } else if (queryExecutor?.get && typeof queryExecutor?.get === 'function') {
       return queryExecutor.get(this.toSQL(), this.getParams());
     } else {
       throw new Error('Invalid query executor provided.');
