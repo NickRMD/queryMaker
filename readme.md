@@ -24,7 +24,7 @@ my-project$ npm install sqm
 Here's a simple example of how to use QueryMaker to create a SELECT query:
 
 ```javascript
-import Query from 'querymaker';
+import Query from 'sqm';
 
 const query = Query.select
     .from('users', 'u')
