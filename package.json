@@ -1,6 +1,6 @@
 {
   "name": "sqm",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,6 +21,10 @@
     "delete",
     "postgres"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NickRMD/queryMaker.git"
+  },
   "author": "Nicolas R. M. Dias <nicolasrenanmachado@gmail.com>",
   "license": "Apache-2.0",
   "devDependencies": {
