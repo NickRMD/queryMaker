@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "build:prod": "tsup src/index.ts --format cjs,esm --dts --out-dir dist --clean --treeshake smallest --minify-identifiers --minify-syntax",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -28,6 +29,8 @@
   "author": "Nicolas R. M. Dias <nicolasrenanmachado@gmail.com>",
   "license": "Apache-2.0",
   "devDependencies": {
+    "terser": "^5.44.0",
+    "tsup": "^8.5.0",
     "typescript": "^5.9.2"
   }
 }
