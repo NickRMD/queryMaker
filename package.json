@@ -2,15 +2,27 @@
   "name": "sqm",
   "version": "0.3.3",
   "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
-  "type": "module",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "build:prod": "tsup src/index.ts --format cjs,esm --dts --out-dir dist --clean --treeshake smallest --minify-identifiers --minify-syntax",
+    "publish:prod": "npm run build:prod && npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
   "keywords": [
     "query",
     "maker",
@@ -25,6 +37,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/NickRMD/queryMaker.git"
+  },
+  "homepage": "https://github.com/NickRMD/queryMaker#readme",
+  "bugs": {
+    "url": "https://github.com/NickRMD/queryMaker/issues"
   },
   "author": "Nicolas R. M. Dias <nicolasrenanmachado@gmail.com>",
   "license": "Apache-2.0",
