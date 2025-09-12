@@ -2,13 +2,13 @@
   "name": "sqm",
   "version": "0.3.4",
   "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
-  "main": "dist/index.cjs",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "module": "dist/index.js",
+  "module": "dist/index.mjs",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
