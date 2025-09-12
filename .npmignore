@@ -3,7 +3,7 @@ tsconfig.json
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
-dist/**/*.d.mts
+dist/index.d.mts
 .vscode
 .idea
 .DS_Store
