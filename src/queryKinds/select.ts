@@ -188,7 +188,7 @@ export default class SelectQuery extends QueryDefinition {
   /*
     * Uses a callback to build the HAVING clause statement.
     */
-  public useHavingStatement(statement: (stmt: Statement) => Statement): this {
+  public useHavingStatement(statement: (stmt: Statement) => Statement | void): this {
     const stmt = new Statement();
     const newStmt = statement(stmt) || stmt;
     return this.having(newStmt);
