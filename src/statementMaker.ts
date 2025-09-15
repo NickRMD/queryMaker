@@ -1,3 +1,4 @@
+import SearchModule from "./searchModule";
 
 /*
   * Defines the statement kind for combining statements.
@@ -281,6 +282,15 @@ export default class Statement {
   ) {
     this.addStatement(`NOT EXISTS (${subquery})`, values, kind);
     return this;
+  }
+
+  /*
+    * Provides access to the SearchModule for advanced search capabilities.
+    * This allows for full-text search, tsvector search, word-by-word search, etc.
+    * Returns an instance of SearchModule linked to this Statement.
+    */
+  public search(): SearchModule {
+    return new SearchModule(this);
   }
 
   /*
