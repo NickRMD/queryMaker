@@ -1,6 +1,10 @@
 import QueryDefinition from "./queryKinds/query.js";
 import SelectQuery from "./queryKinds/select.js";
 
+/*
+  * Cte represents a Common Table Expression (CTE) in SQL.
+  * It allows defining a named subquery that can be referenced within other queries.
+  */
 export class Cte {
   private name: string;
   private query: QueryDefinition;
@@ -41,6 +45,10 @@ export class Cte {
   }
 }
 
+/*
+  * CteMaker helps in constructing SQL queries with multiple Common Table Expressions (CTEs).
+  * It manages a list of CTEs and builds the final SQL string with proper parameter indexing.
+  */
 export default class CteMaker {
   private ctes: Cte[] = [];
 
@@ -48,16 +56,25 @@ export default class CteMaker {
     this.ctes = ctes;
   }
 
+  /*
+    * Adds a new CTE to the list.
+    */
   public addCte(cte: Cte): this {
     this.ctes.push(cte);
     return this;
   }
 
+  /*
+    * Adds multiple CTEs to the list.
+    */
   public addCtes(ctes: Cte[]): this {
     this.ctes.push(...ctes);
     return this;
   }
 
+  /*
+    * Builds the SQL string for all CTEs, renumbering parameters to ensure uniqueness.
+    */
   public build(): { text: string; values: any[] } {
     if (this.ctes.length === 0) {
       return { text: '', values: [] };
