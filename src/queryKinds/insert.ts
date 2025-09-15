@@ -1,18 +1,25 @@
 import CteMaker, { Cte } from "../cteMaker.js";
+import ColumnValue from "../types/ColumnValue";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
-interface ColumnValue {
-  column: string;
-  value?: any;
-}
-
+/*
+  * InsertQuery helps in constructing SQL INSERT queries.
+  * It supports inserting values directly or from a SELECT query.
+  * It also supports Common Table Expressions (CTEs) and RETURNING clauses.
+  */
 export default class InsertQuery extends QueryDefinition {
+  /* The table into which records will be inserted. */
   private table: string;
+  /* The column-value pairs to be inserted. */
   private columnValues: ColumnValue[] = [];
+  /* An optional SELECT query to insert data from. */
   private selectQuery: SelectQuery | null = null;
+  /* The fields to be returned after the insert operation. */
   private returningFields: string[] = [];
+  /* The final built SQL query string. */
   private builtQuery: string | null = null;
+  /* Optional Common Table Expressions (CTEs) for the query. */
   private ctes: CteMaker | null = null;
 
   constructor(table?: string) {
@@ -20,6 +27,10 @@ export default class InsertQuery extends QueryDefinition {
     this.table = table || '';
   }
 
+  /*
+    * Adds Common Table Expressions (CTEs) to the query.
+    * Accepts a CteMaker instance, a single Cte, or an array of Ctes.
+    */
   public with(ctes: CteMaker | Cte | Cte[]): this {
     if (ctes instanceof CteMaker) {
       this.ctes = ctes;
@@ -31,11 +42,16 @@ export default class InsertQuery extends QueryDefinition {
     return this;
   }
 
+  /* Specifies the table into which records will be inserted. */
   public into(table: string): this {
     this.table = table;
     return this;
   }
 
+  /*
+    * Specifies the column-value pairs to be inserted.
+    * Accepts either an array of ColumnValue objects or an object mapping column names to values.
+    */
   public values(columnValues: ColumnValue[] | { [column: string]: any }): this {
     if (Array.isArray(columnValues)) {
       this.columnValues = columnValues;
@@ -48,11 +64,16 @@ export default class InsertQuery extends QueryDefinition {
     return this;
   }
 
+  /*
+    * Specifies a SELECT query to insert data from.
+    * This allows inserting records based on the results of another query.
+    */
   public fromSelect(query: SelectQuery): this {
     this.selectQuery = query;
     return this;
   }
 
+  /* Specifies the fields to be returned after the insert operation. */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
       this.returningFields = fields;
@@ -62,6 +83,7 @@ export default class InsertQuery extends QueryDefinition {
     return this;
   }
 
+  /* Creates a deep clone of the current InsertQuery instance. */
   public clone(): QueryDefinition {
     const cloned = new InsertQuery(this.table);
     cloned.columnValues = JSON.parse(JSON.stringify(this.columnValues));
@@ -71,18 +93,26 @@ export default class InsertQuery extends QueryDefinition {
     return cloned;
   }
 
+  /*
+    * This an INSERT query.
+    */
   public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
     return 'INSERT';
   }
 
+  /*
+    * Indicates whether the query has been built and is ready for execution.
+    */
   public get isDone(): boolean {
     return this.builtQuery !== null;
   }
 
-  public get query(): InsertQuery {
+  /* Provides access to the current InsertQuery instance. */
+  public get query(): QueryDefinition {
     return this;
   }
 
+  /* Invalidates the current state of the query, forcing a rebuild on the next operation. */
   public invalidate(): void {
     this.builtQuery = null;
     this.selectQuery?.invalidate();
@@ -93,6 +123,7 @@ export default class InsertQuery extends QueryDefinition {
     }
   }
 
+  /* Resets the query to its initial state. */
   public reset(): void {
     this.table = '';
     this.columnValues = [];
@@ -102,20 +133,15 @@ export default class InsertQuery extends QueryDefinition {
     this.ctes = null;
   }
 
+  /* Retrieves the parameters associated with the query. */
   public getParams(): any[] {
-    if (!this.builtQuery) this.build();
-    let params: any[] = [];
-    if (this.columnValues.length > 0) {
-      params = this.columnValues.map(cv => cv.value);
-    } else if (this.selectQuery) {
-      params = this.selectQuery.getParams();
-    }
-    if (this.ctes) {
-      params = [...this.ctes.build().values, ...params];
-    }
-    return params;
+    return this.build().values;
   }
 
+  /* 
+    * Builds the SQL INSERT query and returns an object containing the query text and its parameters.
+    * The optional deepAnalysis parameter can be used to control the depth of analysis during the build process.
+    */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (!this.table) {
       throw new Error('No table specified for INSERT query.');
@@ -171,7 +197,6 @@ export default class InsertQuery extends QueryDefinition {
 
 
   public toSQL(): string {
-    if (!this.builtQuery) this.build();
-    return this.builtQuery as string;
+    return this.build().text;
   }
 }
