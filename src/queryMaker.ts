@@ -17,6 +17,9 @@ class Query {
     private readonly deepAnalysisDefault: boolean = false
   ) {}
 
+  /*
+    * Initiates a new SELECT query.
+    */
   public get select() {
     const selectQuery = new SelectQuery();
     selectQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
@@ -25,6 +28,9 @@ class Query {
     return selectQuery;
   }
 
+  /*
+    * Initiates a new DELETE query.
+    */
   public get delete() {
     const deleteQuery = new DeleteQuery();
     deleteQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
@@ -33,14 +39,20 @@ class Query {
     return deleteQuery;
   }
 
-  // public get update() {
-  //   const updateQuery = new UpdateQuery();
-  //   updateQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
-  //     return UpdateQuery.prototype.build.call(updateQuery, deepAnalysis);
-  //   }
-  //   return updateQuery;
-  // }
+  /*
+    * Initiates a new UPDATE query.
+    */
+  public get update() {
+    const updateQuery = new UpdateQuery();
+    updateQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
+      return UpdateQuery.prototype.build.call(updateQuery, deepAnalysis);
+    }
+    return updateQuery;
+  }
 
+  /*
+    * Initiates a new INSERT query.
+    */
   public get create() {
     const insertQuery = new InsertQuery();
     insertQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
@@ -49,6 +61,10 @@ class Query {
     return insertQuery;
   }
 
+  /*
+    * Initiates a new CTE (Common Table Expression) instance.
+    * This can be used to define CTEs for use in queries.
+    */
   public get cte() {
     return new Cte();
   }
@@ -83,11 +99,16 @@ class Query {
 
   /*
     * Initiates a new Statement instance for building complex SQL statements.
+    * This can be used to create WHERE clauses, JOIN conditions, etc.
     */
   public static get statement() {
     return new Statement();
   }
 
+  /*
+    * Initiates a new CTE (Common Table Expression) instance.
+    * This can be used to define CTEs for use in queries.
+    */
   public static get cte() {
     return new Cte();
   }
