@@ -1,3 +1,8 @@
+
+/*
+  * This function extracts parameter names from a function definition.
+  * Useful for comparing function signatures.
+  */
 function getFunctionParameters(func: Function) {
     const funcStr = func.toString();
     const match = funcStr.match(/\(([^)]*)\)/);
@@ -9,6 +14,9 @@ function getFunctionParameters(func: Function) {
         .filter(param => param !== '') || [];
 }
 
+/*
+  * Compares the parameters of two functions to see if they match.
+  */
 function compareParameters(fn1: Function, fn2: Function): boolean {
     const params1 = getFunctionParameters(fn1);
     const params2 = getFunctionParameters(fn2);
@@ -16,6 +24,10 @@ function compareParameters(fn1: Function, fn2: Function): boolean {
     return JSON.stringify(params1) === JSON.stringify(params2);
 }
 
+/*
+  * Deeply compares two values for equality.
+  * Handles primitives, arrays, objects, and functions (by comparing their string representations and parameters).
+  */
 export default function deepEqual(a: any, b: any): boolean {
   if (a === b) return true;
 
