@@ -1,6 +1,6 @@
 import Statement from "../statementMaker.js";
 
-/*
+/**
   * Join interface represents a SQL JOIN clause.
   * It includes the type of join, the table to join, an optional alias, and the condition for the join.
   */

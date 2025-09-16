@@ -1,6 +1,6 @@
 import deepEqual from "../deepEqual.js";
 
-/*
+/**
   * QueryExecutorObject interface defines the structure for an object that can execute SQL queries.
   * It includes optional methods for executing queries in different ways, as well as an optional manager property.
   */
@@ -13,12 +13,12 @@ interface QueryExecutorObject {
   manager?: QueryExecutor;
 }
 
-/*
+/**
   * QueryExecutor type can be either a QueryExecutorObject or a function that executes a query.
   */
 type QueryExecutor = QueryExecutorObject | ((query: string, params: any[]) => Promise<any>);
 
-/*
+/**
   * Abstract class QueryDefinition serves as a blueprint for different types of SQL query definitions.
   * It defines the essential methods and properties that any concrete query class must implement.
   * This includes methods for building the SQL query, executing it, cloning the query definition,
@@ -27,17 +27,17 @@ type QueryExecutor = QueryExecutorObject | ((query: string, params: any[]) => Pr
   */
 export default abstract class QueryDefinition {
 
-  /*
+  /**
     * Converts the query definition to its SQL string representation.
     */
   public abstract toSQL(): string;
 
-  /*
+  /**
     * Retrieves the parameters associated with the query.
     */
   public abstract getParams(): any[];
 
-  /*
+  /**
     * Builds the SQL query and returns an object containing the query text and its parameters.
     * The optional deepAnalysis parameter can be used to control the depth of analysis during the build process.
     */
@@ -46,38 +46,38 @@ export default abstract class QueryDefinition {
     values: any[];
   };
 
-  /*
+  /**
     * Creates a deep copy of the current query definition.
     */
   public abstract clone(): QueryDefinition;
 
-  /*
+  /**
     * Resets the query definition to its initial state.
     */
   public abstract reset(): void;
 
-  /*
+  /**
     * Indicates whether the query definition is complete and ready for execution.
     */
   public abstract get isDone(): boolean;
 
-  /*
+  /**
     * The kind of SQL operation represented by the query definition.
     * It can be one of 'INSERT', 'UPDATE', 'DELETE', or 'SELECT'.
     */
   public abstract kind: 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT';
 
-  /*
+  /**
     * Provides access to the current query definition instance.
     */
   public abstract get query(): QueryDefinition;
 
-  /*
+  /**
     * Invalidates the current state of the query definition, forcing a rebuild on the next operation.
     */
   public abstract invalidate(): void;
 
-  /*
+  /**
     * Builds the SQL query and re-analyzes it for duplicate parameters.
     * This method ensures that the query is optimized by removing redundant parameters.
     */
@@ -86,7 +86,7 @@ export default abstract class QueryDefinition {
     return this.reAnalyzeParsedQueryForDuplicateParams(query.text, query.values);
   }
 
-  /*
+  /**
     * Executes the built SQL query using the provided query executor.
     * The query executor can be a function or an object with methods to execute the query.
     * The optional noManager parameter can be used to bypass the manager property if present.
@@ -116,7 +116,7 @@ export default abstract class QueryDefinition {
     }
   }
 
-  /*
+  /**
     * Builds the SQL query with EXPLAIN ANALYZE prefix for performance analysis.
     * This method is useful for debugging and optimizing SQL queries.
     */
@@ -128,7 +128,7 @@ export default abstract class QueryDefinition {
     }
   }
 
-  /*
+  /**
     * Builds the SQL query with EXPLAIN prefix for query plan analysis.
     * This method is useful for understanding how the database will execute the query.
     */
@@ -140,7 +140,7 @@ export default abstract class QueryDefinition {
     }
   }
  
-  /*
+  /**
     * Re-analyzes the parsed SQL query to identify and consolidate duplicate parameters.
     * This method helps optimize the query by reducing the number of parameters used.
     * It can perform deep equality checks if specified.
@@ -153,7 +153,7 @@ export default abstract class QueryDefinition {
     return QueryDefinition.reAnalyzeParsedQueryForDuplicateParams(query, values, useDeepEqual);
   }
 
-  /*
+  /**
     * Static method to re-analyze a parsed SQL query for duplicate parameters.
     * This method can be used independently of any instance of QueryDefinition.
     */

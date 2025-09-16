@@ -2,7 +2,7 @@ import Query from "./queryMaker";
 import Statement, { StatementKind } from "./statementMaker";
 
 
-/*
+/**
   * SearchModule class provides methods for building search-related SQL conditions.
   * It includes methods for full-text search, word-by-word search, and fuzzy search using trigram similarity.
   * Each method modifies the provided Statement instance to add the appropriate search conditions.
@@ -13,7 +13,7 @@ export default class SearchModule {
     private statement: Statement,
   ) {}
 
-  /*
+  /**
     * Performs a full-text search on a specified field with the given query.
     * It supports case-insensitive searches and allows combining conditions with AND/OR.
     */
@@ -32,7 +32,7 @@ export default class SearchModule {
     return this.statement;
   }
 
-  /*
+  /**
     * Performs a full-text search using PostgreSQL's full-text search capabilities.
     * It constructs a ts_vector and ts_query for more advanced search functionality.
     * The method allows specifying a text search configuration and combining conditions with AND/OR.
@@ -66,7 +66,7 @@ export default class SearchModule {
     return this.statement;
   }
 
-  /*
+  /**
     * Performs a word-by-word search on a specified field with the given query.
     * It splits the query into individual words and searches for each word separately.
     * The method supports case-insensitive searches and allows combining conditions with AND/OR.
@@ -89,7 +89,7 @@ export default class SearchModule {
     return this.statement;
   }
 
-  /*
+  /**
     * Performs a fuzzy search using trigram similarity on a specified field with the given query.
     * It uses PostgreSQL's pg_trgm extension to find similar strings based on a similarity threshold.
     * The method allows specifying the similarity threshold and combining conditions with AND/OR.

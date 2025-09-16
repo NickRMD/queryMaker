@@ -4,71 +4,71 @@ import Join from "../types/Join.js";
 import OrderBy from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 
-/*
+/**
   * SelectQuery class represents a SQL SELECT query.
   * It includes methods to build various parts of the query such as SELECT fields, WHERE conditions, JOINs, ORDER BY, LIMIT, OFFSET, GROUP BY, and CTEs.
   * The class provides functionality to build the final SQL query string and manage query parameters.
   */
 export default class SelectQuery extends QueryDefinition {
-  /*
+  /**
     * The table to select from.
     */
   private table: string;
   private tableAlias: string | null = null;
 
-  /*
+  /**
     * Indicates whether the SELECT is DISTINCT.
     */
   private distinctSelect: boolean = false;
 
-  /*
+  /**
     * The fields to select.
     */
   private selectFields: string[];
 
-  /*
+  /**
     * The WHERE clause statement.
     */
   private whereStatement: Statement | null = null;
 
-  /*
+  /**
     * The HAVING clause statement.
     */
   private havingStatement: Statement | null = null;
 
-  /*
+  /**
     * The JOIN clauses.
     */
   private joins: Join[] = [];
 
-  /*
+  /**
     * The ORDER BY clauses.
     */
   private orderBys: OrderBy[] = [];
   private limitCount: number | null = null;
   private offsetCount: number | null = null;
 
-  /*
+  /**
     * The GROUP BY fields.
     */
   private groupBys: string[] = [];
 
-  /*
+  /**
     * If true, automatically includes all selected fields in the GROUP BY clause.
     */
   private groupBySelectFields: boolean = false;
 
-  /*
+  /**
     * The built SQL query string.
     */
   private builtQuery: string | null = null;
 
-  /*
+  /**
     * The CTEs (Common Table Expressions) for the query.
     */
   private ctes: CteMaker | null = null;
 
-  /*
+  /**
     * If true, disables deep analysis of the query for duplicate parameters.
     */
   private disabledAnalysis: boolean = false;
@@ -85,7 +85,7 @@ export default class SelectQuery extends QueryDefinition {
     this.groupBySelectFields = groupBySelectFields;
   }
 
-  /*
+  /**
     * Add an offset to the WHERE clause parameters.
     * This is useful when combining multiple statements to ensure parameter indices are correct.
     */
@@ -97,7 +97,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Adds CTEs to the query.
     */
   public with(ctes: CteMaker | Cte | Cte[]): this {
@@ -111,7 +111,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Sets the table to select from, with an optional alias.
     */
   public from(table: string, alias: string | null = null): this {
@@ -120,7 +120,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Enables DISTINCT selection.
     */
   public distinct(): this {
@@ -128,7 +128,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Sets the fields to select from.
     */
   public select(fields: string | string[]): this {
@@ -140,7 +140,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Adds fields to the existing selection.
     */
   public addSelect(fields: string | string[]): this {
@@ -152,7 +152,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Adds a Statement or raw SQL string as the WHERE clause.
     */
   public where(statement: Statement | string, ...values: any[]): this {
@@ -164,7 +164,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Uses a callback to build the WHERE clause statement.
     */
   public useStatement(statement: (stmt: Statement) => Statement | void): this {
@@ -173,7 +173,7 @@ export default class SelectQuery extends QueryDefinition {
     return this.where(newStmt);
   }
 
-  /*
+  /**
     * Adds a Statement or raw SQL string as the HAVING clause.
     */
   public having(statement: Statement | string, ...values: any[]): this {
@@ -185,7 +185,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Uses a callback to build the HAVING clause statement.
     */
   public useHavingStatement(statement: (stmt: Statement) => Statement | void): this {
@@ -194,7 +194,7 @@ export default class SelectQuery extends QueryDefinition {
     return this.having(newStmt);
   }
 
-  /*
+  /**
     * Adds JOIN clauses to the query,
     * either as a single Join object or an array of Join objects.
     */
@@ -209,7 +209,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Adds ORDER BY clauses to the query,
     * either as a single OrderBy object or an array of OrderBy objects.
     */
@@ -224,7 +224,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Sets the LIMIT for the query.
     */
   public limit(count: number): this {
@@ -235,7 +235,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Sets the OFFSET for the query.
     */
   public offset(count: number): this {
@@ -246,7 +246,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Sets both LIMIT and OFFSET for the query.
     */
   public limitAndOffset(limit: number, offset: number): this {
@@ -263,7 +263,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Resets both LIMIT and OFFSET to null.
     */
   public resetLimitOffset(): this {
@@ -272,7 +272,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Resets the entire query to its initial state.
     */
   public reset(): void {
@@ -293,7 +293,7 @@ export default class SelectQuery extends QueryDefinition {
     this.disabledAnalysis = false;
   }
 
-  /*
+  /**
     * Adds fields to the GROUP BY clause,
     * either as a single field or an array of fields.
     */
@@ -306,7 +306,7 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Enable grouping by all selected fields.
     * This automatically adds all selected fields to the GROUP BY clause.
     */
@@ -315,21 +315,21 @@ export default class SelectQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Gets whether the query has been built.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
   }
 
-  /*
+  /**
     * This is a SELECT query.
     */
   public get kind(): 'SELECT' {
     return 'SELECT';
   }
 
-  /*
+  /**
     * Get params for the built query.
     * If the query is not built yet, it will build it first.
     */
@@ -337,7 +337,7 @@ export default class SelectQuery extends QueryDefinition {
     return this.build().values;
   }
 
-  /*
+  /**
     * Invalidates the current built query, forcing a rebuild on the next operation.
     * Also invalidates any nested statements or CTE queries.
     */
@@ -351,7 +351,7 @@ export default class SelectQuery extends QueryDefinition {
     }
   }
 
-  /*
+  /**
     * Creates a deep clone of the current SelectQuery instance.
     * This is useful for creating variations of a query without modifying the original.
     */
@@ -373,7 +373,7 @@ export default class SelectQuery extends QueryDefinition {
     return cloned;
   }
 
-  /*
+  /**
     * Makes a UNION ALL of the current query with another SelectQuery.
     * The resulting query will select all fields from both queries.
     * Note: The resulting query cannot be cloned.
@@ -426,7 +426,7 @@ export default class SelectQuery extends QueryDefinition {
     return unionQuery;
   }
 
-  /*
+  /**
     * Makes a UNION of the current query with another SelectQuery.
     * The resulting query will select all fields from both queries, removing duplicates.
     * Note: The resulting query cannot be cloned.
@@ -479,7 +479,7 @@ export default class SelectQuery extends QueryDefinition {
     return unionQuery;
   }
 
-  /*
+  /**
     * Builds the final SQL SELECT query string and returns it along with the associated parameter values.
     * If deepAnalysis is true, it will perform a deep analysis to identify and consolidate duplicate parameters.
     * Throws an error if the table name is not set.
@@ -595,7 +595,7 @@ export default class SelectQuery extends QueryDefinition {
     }
   }
 
-  /*
+  /**
     * Returns the built SQL query string.
     * If the query is not built yet, it will build it first.
     */
@@ -603,7 +603,7 @@ export default class SelectQuery extends QueryDefinition {
     return this.build().text;
   }
 
-  /*
+  /**
     * Gets the query definition itself.
     */
   public get query(): QueryDefinition {

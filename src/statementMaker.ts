@@ -1,38 +1,38 @@
 import SearchModule from "./searchModule";
 
-/*
+/**
   * Defines the statement kind for combining statements.
   * 'AND' and 'OR' are the two possible kinds.
   */
 export type StatementKind = 'AND' | 'OR';
 
-/*
+/**
   * A class to build SQL WHERE clauses with parameterized queries.
   * It supports various SQL conditions and allows combining multiple statements.
   * It ensures that the generated SQL is safe from injection attacks by using placeholders.
   * It can also handle nested statements and subqueries.
   */
 export default class Statement {
-  /*
+  /**
     * The current index for parameter placeholders.
     */
   private index: number;
-  /*
+  /**
     * Array to hold individual unparsed SQL statements.
     * These statements will be combined to form the final SQL clause.
     */
   private statements: string[] = [];
-  /*
+  /**
     * The final parsed SQL statement with placeholders.
     * This is generated when the build method is called.
     */
   private parsedStatement: string | null = null;
-  /*
+  /**
     * Array to hold the values corresponding to the placeholders in the SQL statement.
     * These values will be used in the parameterized query execution.
     */
   private values: any[] = [];
-  /*
+  /**
     * Flag to determine if the final statement should include the 'WHERE' keyword.
     * This is useful when the statement is part of a larger SQL query.
     */
@@ -42,7 +42,7 @@ export default class Statement {
     this.index = 1 + initialOffset;
   }
 
-  /*
+  /**
     * Adds multiple parameters to the values array and updates the index accordingly.
     * This is useful when you have a list of values to be used in the SQL statement.
     */
@@ -52,7 +52,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds an offset to the current index.
     * This is useful when you want to adjust the starting point for parameter placeholders.
     */
@@ -61,7 +61,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Enables the addition of the 'WHERE' keyword in the final SQL statement.
     * This is useful when the statement is a standalone WHERE clause.
     */
@@ -69,7 +69,7 @@ export default class Statement {
     this.addWhere = true;
   }
 
-  /*
+  /**
     * Disables the addition of the 'WHERE' keyword in the final SQL statement.
     * This is useful when the statement is part of a larger SQL query that already includes 'WHERE'.
     */
@@ -81,7 +81,7 @@ export default class Statement {
     return (template.match(/\?/g) || []).length;
   }
 
-  /*
+  /**
     * Invalidates the current parsed statement.
     * This forces a re-parse the next time the build method is called.
     */
@@ -89,7 +89,7 @@ export default class Statement {
     this.parsedStatement = null;
   }
 
-  /*
+  /**
     * Resets the statement to its initial state.
     * This clears all collected statements, values, and resets the index.
     * It also re-enables the addition of the 'WHERE' keyword.
@@ -102,7 +102,7 @@ export default class Statement {
     this.addWhere = true;
   }
 
-  /*
+  /**
     * Adds a new SQL statement to the list of statements.
     * It handles both string statements and nested Statement instances.
     * It also manages the values associated with the statement and the logical kind (AND/OR).
@@ -132,7 +132,7 @@ export default class Statement {
     this.values.push(...values); 
   }
 
-  /*
+  /**
     * Adds a new statement combined with 'AND'.
     */
   public and(
@@ -143,7 +143,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a new statement combined with 'OR'.
     */
   public or(
@@ -154,7 +154,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds an equality condition to the statement.
     */
   public in(
@@ -167,7 +167,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a NOT IN condition to the statement.
     */
   public notIn(column: string, values: any[], kind: StatementKind = 'AND') {
@@ -176,7 +176,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds an equality condition to the statement.
     * Especially useful for simple date or string comparisons.
     */
@@ -190,7 +190,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a NOT BETWEEN condition to the statement.
     */
   public isNull(
@@ -201,7 +201,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds an IS NOT NULL condition to the statement.
     */
   public isNotNull(
@@ -212,7 +212,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds an equality condition to the statement.
     */
   public like(
@@ -224,7 +224,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a case-insensitive LIKE condition to the statement.
     */
   public ilike(
@@ -236,7 +236,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a NOT LIKE condition to the statement.
     */
   public notLike(
@@ -248,7 +248,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a case-insensitive NOT LIKE condition to the statement.
     */
   public notILike(
@@ -260,7 +260,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds an EXISTS condition with a subquery to the statement.
     */
   public exists(
@@ -272,7 +272,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Adds a NOT EXISTS condition with a subquery to the statement.
     */
   public notExists(
@@ -284,7 +284,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Provides access to the SearchModule for advanced search capabilities.
     * This allows for full-text search, tsvector search, word-by-word search, etc.
     * Returns an instance of SearchModule linked to this Statement.
@@ -293,7 +293,7 @@ export default class Statement {
     return new SearchModule(this);
   }
 
-  /*
+  /**
     * Adds a raw SQL statement with placeholders to the statement list.
     * This allows for custom SQL conditions that may not be covered by the predefined methods.
     */
@@ -318,7 +318,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Joins multiple Statement instances into the current statement.
     * This allows for complex nested conditions to be built up from smaller parts.
     */
@@ -334,7 +334,7 @@ export default class Statement {
     return this;
   }
 
-  /*
+  /**
     * Checks if the statements have already been parsed.
     * This prevents re-parsing and ensures that the final SQL is only generated once.
     */
@@ -342,7 +342,7 @@ export default class Statement {
     return this.parsedStatement !== null;
   }
 
-  /*
+  /**
     * Parses the collected statements into a single SQL string with placeholders.
     * It also adds the 'WHERE' keyword if required.
     */
@@ -362,7 +362,7 @@ export default class Statement {
     return this.parsedStatement;
   }
 
-  /*
+  /**
     * Builds the final SQL statement and the corresponding values array.
     * This is the method to call when the statement is complete and ready for execution.
     */
@@ -386,7 +386,7 @@ export default class Statement {
     return clone;
   }
 
-  /*
+  /**
     * Returns the raw SQL statement and values without parsing.
     * This is useful for debugging or when the raw format is needed.
     */

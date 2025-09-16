@@ -5,7 +5,7 @@ import SelectQuery from "./queryKinds/select.js";
 import UpdateQuery from "./queryKinds/update.js";
 import Statement from "./statementMaker.js";
 
-/*
+/**
   * QueryMaker is a factory class that provides static methods to create instances of different query types.
   * It includes methods for creating SELECT, CREATE, DELETE, and UPDATE queries.
   * It also provides a method to create a Statement instance for building complex SQL statements.
@@ -17,7 +17,7 @@ class Query {
     private readonly deepAnalysisDefault: boolean = false
   ) {}
 
-  /*
+  /**
     * Initiates a new SELECT query.
     */
   public get select() {
@@ -28,7 +28,7 @@ class Query {
     return selectQuery;
   }
 
-  /*
+  /**
     * Initiates a new DELETE query.
     */
   public get delete() {
@@ -39,7 +39,7 @@ class Query {
     return deleteQuery;
   }
 
-  /*
+  /**
     * Initiates a new UPDATE query.
     */
   public get update() {
@@ -50,7 +50,7 @@ class Query {
     return updateQuery;
   }
 
-  /*
+  /**
     * Initiates a new INSERT query.
     */
   public get create() {
@@ -61,7 +61,7 @@ class Query {
     return insertQuery;
   }
 
-  /*
+  /**
     * Initiates a new CTE (Common Table Expression) instance.
     * This can be used to define CTEs for use in queries.
     */
@@ -69,35 +69,35 @@ class Query {
     return new Cte();
   }
 
-  /*
+  /**
     * Initiates a new SELECT query.
     */
   public static get select() {
     return new SelectQuery();
   }
 
-  /*
+  /**
     * Initiates a new DELETE query.
     */
   public static get delete() {
     return new DeleteQuery();
   }
 
-  /*
+  /**
     * Initiates a new UPDATE query.
     */
   public static get update() {
     return new UpdateQuery();
   }
 
-  /*
+  /**
     * Initiates a new INSERT query.
     */
   public static get create() {
     return new InsertQuery();
   }
 
-  /*
+  /**
     * Initiates a new Statement instance for building complex SQL statements.
     * This can be used to create WHERE clauses, JOIN conditions, etc.
     */
@@ -105,7 +105,7 @@ class Query {
     return new Statement();
   }
 
-  /*
+  /**
     * Initiates a new CTE (Common Table Expression) instance.
     * This can be used to define CTEs for use in queries.
     */

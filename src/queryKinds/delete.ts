@@ -3,26 +3,26 @@ import Statement from "../statementMaker.js";
 import UsingTable from "../types/UsingTable.js";
 import QueryDefinition from "./query.js";
 
-/*
+/**
   * DeleteQuery class represents a SQL DELETE query.
   * It provides methods to build and manipulate the query, including specifying the table to delete from,
   * adding USING clauses, WHERE conditions, RETURNING fields, and Common Table Expressions (CTEs).
   * The class supports cloning, resetting, and building the final SQL query string with parameters.
   */
 export default class DeleteQuery extends QueryDefinition {
-  /* The table from which records will be deleted. */
+  /** The table from which records will be deleted. */
   private deletingFrom: string;
   private deletingFromAlias: string | null = null;
 
-  /* Tables to be used in the USING clause. */
+  /** Tables to be used in the USING clause. */
   private usingTables: UsingTable[] = [];
-  /* The WHERE clause statement. */
+  /** The WHERE clause statement. */
   private whereStatement: Statement | null = null;
-  /* The fields to be returned after the delete operation. */
+  /** The fields to be returned after the delete operation. */
   private returningFields: string[] = [];
-  /* The final built SQL query string. */
+  /** The final built SQL query string. */
   private builtQuery: string | null = null;
-  /* Optional Common Table Expressions (CTEs) for the query. */
+  /** Optional Common Table Expressions (CTEs) for the query. */
   private ctes: CteMaker | null = null;
 
   constructor(from?: string, alias: string | null = null) {
@@ -31,7 +31,7 @@ export default class DeleteQuery extends QueryDefinition {
     this.deletingFromAlias = alias;
   }
 
-  /* 
+  /** 
     * Adds Common Table Expressions (CTEs) to the query.
     * Accepts a CteMaker instance, a single Cte, or an array of Ctes.
     */
@@ -46,14 +46,14 @@ export default class DeleteQuery extends QueryDefinition {
     return this;
   }
 
-  /* Specifies the table from which records will be deleted, with an optional alias. */
+  /** Specifies the table from which records will be deleted, with an optional alias. */
   public from(table: string, alias: string | null = null): this {
     this.deletingFrom = table;
     this.deletingFromAlias = alias;
     return this;
   }
 
-  /* Adds tables to the USING clause. Accepts a string, a UsingTable object, or an array of UsingTable objects. */
+  /** Adds tables to the USING clause. Accepts a string, a UsingTable object, or an array of UsingTable objects. */
   public using(tables: string | UsingTable | UsingTable[]): this {
     if (Array.isArray(tables)) {
       this.usingTables.push(...tables);
@@ -70,7 +70,7 @@ export default class DeleteQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Specifies the WHERE clause for the DELETE query.
     * Accepts either a Statement object or a raw SQL string with optional parameters.
     */
@@ -83,7 +83,7 @@ export default class DeleteQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Allows building the WHERE clause using a callback function that receives a Statement object.
     * This provides a more fluent interface for constructing complex WHERE conditions.
     */
@@ -93,7 +93,7 @@ export default class DeleteQuery extends QueryDefinition {
     return this.where(newStmt);
   }
 
-  /* 
+  /** 
     * Specifies the fields to be returned after the delete operation. 
     * Accepts a string or an array of strings. 
     */
@@ -106,7 +106,7 @@ export default class DeleteQuery extends QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Creates a deep clone of the current DeleteQuery instance.
     * This is useful for creating variations of the query without modifying the original.
     */
@@ -119,7 +119,7 @@ export default class DeleteQuery extends QueryDefinition {
     return cloned;
   }
 
-  /*
+  /**
     * Resets the state of the DeleteQuery instance, clearing all configurations.
     * This allows reusing the instance for building a new query from scratch.
     */
@@ -133,28 +133,28 @@ export default class DeleteQuery extends QueryDefinition {
     this.builtQuery = null;
   }
 
-  /*
+  /**
     * Indicates whether the query has been built and is ready for execution.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
   }
 
-  /*
+  /**
     * This a DELETE query.
     */
   public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
     return 'DELETE';
   }
 
-  /*
+  /**
     * Provides access to the current DeleteQuery instance.
     */
   public get query(): QueryDefinition {
     return this;
   }
 
-  /*
+  /**
     * Invalidates the current state of the query, forcing a rebuild on the next operation.
     */
   public invalidate(): void {
@@ -167,7 +167,7 @@ export default class DeleteQuery extends QueryDefinition {
     }
   }
 
-  /*
+  /**
     * Builds the SQL DELETE query and returns an object containing the query text and its parameters.
     * The optional deepAnalysis parameter can be used to control the depth of analysis during the build process.
     */

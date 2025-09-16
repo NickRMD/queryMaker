@@ -1,5 +1,5 @@
 
-/*
+/**
   * This function extracts parameter names from a function definition.
   * Useful for comparing function signatures.
   */
@@ -14,7 +14,7 @@ function getFunctionParameters(func: Function) {
         .filter(param => param !== '') || [];
 }
 
-/*
+/**
   * Compares the parameters of two functions to see if they match.
   */
 function compareParameters(fn1: Function, fn2: Function): boolean {
@@ -24,7 +24,7 @@ function compareParameters(fn1: Function, fn2: Function): boolean {
     return JSON.stringify(params1) === JSON.stringify(params2);
 }
 
-/*
+/**
   * Deeply compares two values for equality.
   * Handles primitives, arrays, objects, and functions (by comparing their string representations and parameters).
   */
