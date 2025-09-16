@@ -20,21 +20,36 @@ export class Cte {
     this.recursiveCte = recursive;
   }
 
+  /**
+    * Marks the CTE as recursive.
+    */
   public recursive(): this {
     this.recursiveCte = true;
     return this;
   }
 
+  /**
+    * Sets the name of the CTE.
+    * The name should be a valid SQL identifier.
+    */
   public as(name: string): this {
     this.name = name;
     return this;
   }
 
+  /**
+    * Sets the query that defines the CTE.
+    * The query should be an instance of a class that extends QueryDefinition (e.g., SelectQuery).
+    */
   public withQuery(query: SelectQuery): this {
     this.query = query;
     return this;
   }
 
+  /**
+    * Builds the SQL string for the CTE, including its name and query.
+    * Returns an object containing the SQL text and associated parameter values.
+    */
   public build(): { text: string; values: any[] } {
     const recursiveStr = this.recursiveCte ? 'RECURSIVE ' : '';
     const query = this.query.build();
