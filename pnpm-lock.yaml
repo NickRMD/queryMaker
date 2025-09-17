@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      ts-pattern:
+        specifier: ^5.8.0
+        version: 5.8.0
     devDependencies:
       terser:
         specifier: ^5.44.0
@@ -620,6 +624,9 @@ packages:
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
+  ts-pattern@5.8.0:
+    resolution: {integrity: sha512-kIjN2qmWiHnhgr5DAkAafF9fwb0T5OhMVSWrm8XEdTFnX6+wfXwYOFjeF86UZ54vduqiR7BfqScFmXSzSaH8oA==}
+
   tsup@8.5.0:
     resolution: {integrity: sha512-VmBp77lWNQq6PfuMqCHD3xWl22vEoWsKajkF8t+yMBawlUS8JzEI+vOVMeuNZIuMML8qXRizFKi9oD5glKQVcQ==}
     engines: {node: '>=18'}
@@ -1148,6 +1155,8 @@ snapshots:
   tree-kill@1.2.2: {}
 
   ts-interface-checker@0.1.13: {}
+
+  ts-pattern@5.8.0: {}
 
   tsup@8.5.0(typescript@5.9.2):
     dependencies:
