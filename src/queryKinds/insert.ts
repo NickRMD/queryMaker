@@ -135,7 +135,17 @@ export default class InsertQuery extends QueryDefinition {
 
   /** Retrieves the parameters associated with the query. */
   public getParams(): any[] {
-    return this.build().values;
+    if (!this.builtQuery) this.build();
+    let params: any[] = [];
+    if (this.columnValues.length > 0) {
+      params = this.columnValues.map(cv => cv.value);
+    } else if (this.selectQuery) {
+      params = this.selectQuery.getParams();
+    }
+    if (this.ctes) {
+      params = [...this.ctes.build().values, ...params];
+    }
+    return params;
   }
 
   /** 
