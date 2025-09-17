@@ -1,7 +1,9 @@
 import CteMaker, { Cte } from "../cteMaker.js";
+import SqlEscaper from "../sqlEscaper";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
 import OrderBy from "../types/OrderBy.js";
+import sqlFlavor from "../types/sqlFlavor";
 import QueryDefinition from "./query.js";
 
 /**
@@ -73,6 +75,14 @@ export default class SelectQuery extends QueryDefinition {
     */
   private disabledAnalysis: boolean = false;
 
+  /**
+    * List of schemas for using in query
+    */
+  private schemas: string[] = [];
+
+
+  private flavor = sqlFlavor.postgres;
+
   constructor(
     from?: string,
     alias: string | null = null,
@@ -83,6 +93,15 @@ export default class SelectQuery extends QueryDefinition {
     this.tableAlias = alias;
     this.selectFields = ['*'];
     this.groupBySelectFields = groupBySelectFields;
+  }
+
+  /**
+    * Set schemas to be used in the query.
+    * This is useful for databases that support multiple schemas.
+    */
+  public schema(...schemas: string[]): this {
+    this.schemas = schemas;
+    return this;
   }
 
   /**
@@ -133,9 +152,11 @@ export default class SelectQuery extends QueryDefinition {
     */
   public select(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.selectFields = fields;
+      this.selectFields = 
+        SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
     } else {
-      this.selectFields = [fields];
+      this.selectFields = 
+        SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
     }
     return this;
   }
@@ -145,9 +166,13 @@ export default class SelectQuery extends QueryDefinition {
     */
   public addSelect(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.selectFields.push(...fields);
+      const escaped = 
+        SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
+      this.selectFields.push(...escaped);
     } else {
-      this.selectFields.push(fields);
+      const escaped = 
+        SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
+      this.selectFields.push(...escaped);
     }
     return this;
   }
