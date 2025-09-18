@@ -54,12 +54,16 @@ export default class InsertQuery extends QueryDefinition {
     */
   public values(columnValues: ColumnValue[] | { [column: string]: any }): this {
     if (Array.isArray(columnValues)) {
-      this.columnValues = columnValues;
+      this.columnValues = columnValues
+        .filter(v => v.value !== undefined)
+        .map(v => ({ ...v, value: v.value ?? null }));
     } else {
-      this.columnValues = Object.entries(columnValues).map(([column, value]) => ({
-        column,
-        value
-      }));
+      this.columnValues = Object.entries(columnValues)
+        .filter(([, value]) => value !== undefined)
+        .map(([column, value]) => ({
+          column,
+          value: value ?? null
+        }));
     }
     return this;
   }

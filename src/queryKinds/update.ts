@@ -89,9 +89,11 @@ export default class UpdateQuery extends QueryDefinition {
     */
   public set(values: SetValue | SetValue[]): this {
     if (Array.isArray(values)) {
-      this.setValues = values;
-    } else {
-      this.setValues = [values];
+      this.setValues = values
+        .filter(v => v.value !== undefined)
+        .map(v => ({ ...v, value: v.value ?? null }));
+    } else if (values.value !== undefined) {
+      this.setValues = [values ?? null];
     }
     return this;
   }
