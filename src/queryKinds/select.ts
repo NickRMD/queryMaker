@@ -14,6 +14,10 @@ export default class SelectQuery extends QueryDefinition {
     * The table to select from.
     */
   private table: string;
+
+  /**
+    * An optional alias for the table.
+    */
   private tableAlias: string | null = null;
 
   /**
@@ -45,7 +49,15 @@ export default class SelectQuery extends QueryDefinition {
     * The ORDER BY clauses.
     */
   private orderBys: OrderBy[] = [];
+
+  /**
+    * The LIMIT count.
+    */
   private limitCount: number | null = null;
+
+  /**
+    * The OFFSET count.
+    */
   private offsetCount: number | null = null;
 
   /**
@@ -73,6 +85,12 @@ export default class SelectQuery extends QueryDefinition {
     */
   private disabledAnalysis: boolean = false;
 
+  /**
+    * Creates a new SelectQuery instance.
+    * @param from The table to select from.
+    * @param alias An optional alias for the table.
+    * @param groupBySelectFields If true, automatically includes all selected fields in the GROUP BY clause.
+    */
   constructor(
     from?: string,
     alias: string | null = null,
@@ -88,6 +106,8 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Add an offset to the WHERE clause parameters.
     * This is useful when combining multiple statements to ensure parameter indices are correct.
+    * @param offset The offset to add to the parameter indices.
+    * @returns The current SelectQuery instance for chaining.
     */
   public addWhereOffset(offset: number): this {
     if (this.whereStatement) {
@@ -99,6 +119,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Adds CTEs to the query.
+    * Can accept a CteMaker instance, a single Cte object, or an array of Cte objects.
+    * @param ctes The CTEs to add.
+    * @returns The current SelectQuery instance for chaining.
     */
   public with(ctes: CteMaker | Cte | Cte[]): this {
     if (ctes instanceof CteMaker) {
@@ -113,6 +136,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Sets the table to select from, with an optional alias.
+    * @param table The table name.
+    * @param alias An optional alias for the table.
+    * @returns The current SelectQuery instance for chaining.
     */
   public from(table: string, alias: string | null = null): this {
     this.table = table;
@@ -122,6 +148,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Enables DISTINCT selection.
+    * @return The current SelectQuery instance for chaining.
     */
   public distinct(): this {
     this.distinctSelect = true;
@@ -130,6 +157,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Sets the fields to select from.
+    * Can accept a single field as a string or multiple fields as an array of strings.
+    * @param fields The fields to select.
+    * @returns The current SelectQuery instance for chaining.
     */
   public select(fields: string | string[]): this {
     if (Array.isArray(fields)) {
@@ -142,6 +172,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Adds fields to the existing selection.
+    * Can accept a single field as a string or multiple fields as an array of strings.
+    * @param fields The fields to add to the selection.
+    * @returns The current SelectQuery instance for chaining.
     */
   public addSelect(fields: string | string[]): this {
     if (Array.isArray(fields)) {
@@ -154,6 +187,10 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Adds a Statement or raw SQL string as the WHERE clause.
+    * If a string is provided, it will be converted into a raw Statement.
+    * @param statement The WHERE clause as a Statement or raw SQL string.
+    * @param values Optional values for parameterized queries.
+    * @returns The current SelectQuery instance for chaining.
     */
   public where(statement: Statement | string, ...values: any[]): this {
     if (typeof statement === 'string') {
@@ -166,6 +203,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Uses a callback to build the WHERE clause statement.
+    * The callback receives a Statement instance to build upon.
+    * @param statement A callback function that receives a Statement instance.
+    * @returns The current SelectQuery instance for chaining.
     */
   public useStatement(statement: (stmt: Statement) => Statement | void): this {
     const stmt = new Statement();
@@ -175,6 +215,10 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Adds a Statement or raw SQL string as the HAVING clause.
+    * If a string is provided, it will be converted into a raw Statement.
+    * @param statement The HAVING clause as a Statement or raw SQL string.
+    * @param values Optional values for parameterized queries.
+    * @returns The current SelectQuery instance for chaining.
     */
   public having(statement: Statement | string, ...values: any[]): this {
     if (typeof statement === 'string') {
@@ -187,6 +231,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Uses a callback to build the HAVING clause statement.
+    * The callback receives a Statement instance to build upon.
+    * @param statement A callback function that receives a Statement instance.
+    * @returns The current SelectQuery instance for chaining.
     */
   public useHavingStatement(statement: (stmt: Statement) => Statement | void): this {
     const stmt = new Statement();
@@ -197,6 +244,8 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Adds JOIN clauses to the query,
     * either as a single Join object or an array of Join objects.
+    * @param join The JOIN clause(s) to add.
+    * @returns The current SelectQuery instance for chaining.
     */
   public join(
     join: Join | Join[] 
@@ -212,6 +261,8 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Adds ORDER BY clauses to the query,
     * either as a single OrderBy object or an array of OrderBy objects.
+    * @param orderBy The ORDER BY clause(s) to add.
+    * @returns The current SelectQuery instance for chaining.
     */
   public orderBy(
     orderBy: OrderBy | OrderBy[]
@@ -226,6 +277,8 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Sets the LIMIT for the query.
+    * @param count The maximum number of records to return.
+    * @returns The current SelectQuery instance for chaining.
     */
   public limit(count: number): this {
     if (typeof count !== 'number' || count < 0 || !Number.isInteger(count)) {
@@ -237,6 +290,8 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Sets the OFFSET for the query.
+    * @param count The number of records to skip.
+    * @returns The current SelectQuery instance for chaining.
     */
   public offset(count: number): this {
     if (typeof count !== 'number' || count < 0 || !Number.isInteger(count)) {
@@ -248,6 +303,9 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Sets both LIMIT and OFFSET for the query.
+    * @param limit The maximum number of records to return.
+    * @param offset The number of records to skip.
+    * @returns The current SelectQuery instance for chaining.
     */
   public limitAndOffset(limit: number, offset: number): this {
     if (typeof limit !== 'number' || limit < 0 || !Number.isInteger(limit)) {
@@ -265,6 +323,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Resets both LIMIT and OFFSET to null.
+    * @return The current SelectQuery instance for chaining.
     */
   public resetLimitOffset(): this {
     this.limitCount = null;
@@ -274,6 +333,8 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Resets the entire query to its initial state.
+    * This includes clearing the table, selected fields, WHERE clause, JOINs, ORDER BY, LIMIT, OFFSET, GROUP BY, CTEs, and any built query.
+    * @return void
     */
   public reset(): void {
     this.table = '';
@@ -296,6 +357,8 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Adds fields to the GROUP BY clause,
     * either as a single field or an array of fields.
+    * @param fields The field(s) to add to the GROUP BY clause.
+    * @returns The current SelectQuery instance for chaining.
     */
   public groupBy(fields: string | string[]): this {
     if (Array.isArray(fields)) {
@@ -309,6 +372,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Enable grouping by all selected fields.
     * This automatically adds all selected fields to the GROUP BY clause.
+    * @return The current SelectQuery instance for chaining.
     */
   public enableGroupBySelectFields(): this {
     this.groupBySelectFields = true;
@@ -317,6 +381,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Gets whether the query has been built.
+    * @return boolean The built status of the query.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
@@ -324,6 +389,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * This is a SELECT query.
+    * @return 'SELECT' The kind of query.
     */
   public get kind(): 'SELECT' {
     return 'SELECT';
@@ -332,6 +398,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Get params for the built query.
     * If the query is not built yet, it will build it first.
+    * @return any[] The parameters for the built query.
     */
   public getParams(): any[] {
     return this.build().values;
@@ -340,6 +407,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Invalidates the current built query, forcing a rebuild on the next operation.
     * Also invalidates any nested statements or CTE queries.
+    * @return void
     */
   public invalidate(): void {
     this.builtQuery = null;
@@ -354,6 +422,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Creates a deep clone of the current SelectQuery instance.
     * This is useful for creating variations of a query without modifying the original.
+    * @returns A new SelectQuery instance that is a clone of the current instance.
     */
   public clone(): SelectQuery {
     const cloned = new SelectQuery(this.table, this.tableAlias, this.groupBySelectFields);
@@ -377,6 +446,8 @@ export default class SelectQuery extends QueryDefinition {
     * Makes a UNION ALL of the current query with another SelectQuery.
     * The resulting query will select all fields from both queries.
     * Note: The resulting query cannot be cloned.
+    * @param query The SelectQuery to union with the current query.
+    * @returns A new SelectQuery instance representing the UNION ALL of the two queries.
     */
   public unionAll(query: SelectQuery): SelectQuery {
     let firstQuery;
@@ -430,6 +501,8 @@ export default class SelectQuery extends QueryDefinition {
     * Makes a UNION of the current query with another SelectQuery.
     * The resulting query will select all fields from both queries, removing duplicates.
     * Note: The resulting query cannot be cloned.
+    * @param query The SelectQuery to union with the current query.
+    * @returns A new SelectQuery instance representing the UNION of the two queries.
     */
   public union(query: SelectQuery): SelectQuery {
     let firstQuery;
@@ -483,6 +556,8 @@ export default class SelectQuery extends QueryDefinition {
     * Builds the final SQL SELECT query string and returns it along with the associated parameter values.
     * If deepAnalysis is true, it will perform a deep analysis to identify and consolidate duplicate parameters.
     * Throws an error if the table name is not set.
+    * @param deepAnalysis Whether to perform deep analysis for duplicate parameters. Default is false.
+    * @returns An object containing the SQL query string and an array of parameter values.
     */
   public build(deepAnalysis: boolean = false): { text: string; values: any[]; } {
     if (!this.table) {
@@ -598,6 +673,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Returns the built SQL query string.
     * If the query is not built yet, it will build it first.
+    * @return string The SQL query string.
     */
   public toSQL(): string {
     return this.build().text;
@@ -605,6 +681,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Gets the query definition itself.
+    * @return QueryDefinition The current SelectQuery instance.
     */
   public get query(): QueryDefinition {
     return this;
