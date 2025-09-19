@@ -123,6 +123,13 @@ export default abstract class QueryDefinition<S = any> {
     return this;
   }
 
+  /**
+    * Adds schemas to the existing list of schemas.
+    * This is useful for databases that support multiple schemas.
+    * NOTICE: SQL Injection is not checked in schema names. Be sure to use only trusted schema names.
+    * @param schemas The schemas to add.
+    * @returns The current SelectQuery instance for chaining.
+    */
   public addSchema(...schemas: string[]): this {
     this.schemas.push(...schemas);
     return this;
