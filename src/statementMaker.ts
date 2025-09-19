@@ -111,7 +111,7 @@ export default class Statement {
     * Resets the statement to its initial state.
     * This clears all collected statements, values, and resets the index.
     * It also re-enables the addition of the 'WHERE' keyword.
-    * @return void
+    * @returns void
     */
   public reset() {
     this.statements = [];

@@ -148,7 +148,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Enables DISTINCT selection.
-    * @return The current SelectQuery instance for chaining.
+    * @returns The current SelectQuery instance for chaining.
     */
   public distinct(): this {
     this.distinctSelect = true;
@@ -323,7 +323,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Resets both LIMIT and OFFSET to null.
-    * @return The current SelectQuery instance for chaining.
+    * @returns The current SelectQuery instance for chaining.
     */
   public resetLimitOffset(): this {
     this.limitCount = null;
@@ -334,7 +334,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Resets the entire query to its initial state.
     * This includes clearing the table, selected fields, WHERE clause, JOINs, ORDER BY, LIMIT, OFFSET, GROUP BY, CTEs, and any built query.
-    * @return void
+    * @returns void
     */
   public reset(): void {
     this.table = '';
@@ -372,7 +372,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Enable grouping by all selected fields.
     * This automatically adds all selected fields to the GROUP BY clause.
-    * @return The current SelectQuery instance for chaining.
+    * @returns The current SelectQuery instance for chaining.
     */
   public enableGroupBySelectFields(): this {
     this.groupBySelectFields = true;
@@ -381,7 +381,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Gets whether the query has been built.
-    * @return boolean The built status of the query.
+    * @returns boolean The built status of the query.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
@@ -389,7 +389,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * This is a SELECT query.
-    * @return 'SELECT' The kind of query.
+    * @returns 'SELECT' The kind of query.
     */
   public get kind(): 'SELECT' {
     return 'SELECT';
@@ -398,7 +398,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Get params for the built query.
     * If the query is not built yet, it will build it first.
-    * @return any[] The parameters for the built query.
+    * @returns any[] The parameters for the built query.
     */
   public getParams(): any[] {
     return this.build().values;
@@ -407,7 +407,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Invalidates the current built query, forcing a rebuild on the next operation.
     * Also invalidates any nested statements or CTE queries.
-    * @return void
+    * @returns void
     */
   public invalidate(): void {
     this.builtQuery = null;
@@ -673,7 +673,7 @@ export default class SelectQuery extends QueryDefinition {
   /**
     * Returns the built SQL query string.
     * If the query is not built yet, it will build it first.
-    * @return string The SQL query string.
+    * @returns string The SQL query string.
     */
   public toSQL(): string {
     return this.build().text;
@@ -681,7 +681,7 @@ export default class SelectQuery extends QueryDefinition {
 
   /**
     * Gets the query definition itself.
-    * @return QueryDefinition The current SelectQuery instance.
+    * @returns QueryDefinition The current SelectQuery instance.
     */
   public get query(): QueryDefinition {
     return this;

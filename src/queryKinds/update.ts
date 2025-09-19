@@ -87,7 +87,7 @@ export default class UpdateQuery extends QueryDefinition {
     * Adds JOIN clauses to the update query.
     * Accepts either a single Join object or an array of Join objects.
     * @param join - The JOIN clause(s) to be added.
-    * @return The current UpdateQuery instance for method chaining.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public join(join: Join | Join[]): this {
     if (Array.isArray(join)) {
