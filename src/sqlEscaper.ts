@@ -1,5 +1,4 @@
-import { match } from "ts-pattern";
-import { union } from "ts-pattern/dist/patterns";
+import { match, P } from "ts-pattern";
 import sqlFlavor from "./types/sqlFlavor";
 
 export default class SqlEscaper {
@@ -12,6 +11,26 @@ export default class SqlEscaper {
     escapeCharReplacement: string = "\"\""
   ): string {
     return `${escapeChar}${value.replace(new RegExp(escapeChar, "g"), escapeCharReplacement)}${escapeChar}`;
+  }
+
+  public static appendSchemas(
+    query: string,
+    schemas: string[] = []
+  ) {
+    return query.replace(/\$schema\d*/g, (match) => {
+      const indexMatch = match.match(/\d+/);
+      const index = indexMatch ? parseInt(indexMatch[0], 10) : 0;
+      if (index < schemas.length) {
+        return schemas[index]!;
+      } else {
+        throw new Error(
+          [
+            `Schema index ${index} out of bounds for provided schemas.`,
+            `Provided schemas: [${schemas.join(", ")}]`
+          ].join(" ")
+        );
+      }
+    });
   }
 
   /**
@@ -33,7 +52,7 @@ export default class SqlEscaper {
 
     const escapedIdentifier = match(flavor)
       .returnType<string | undefined>()
-      .with(union(sqlFlavor.postgres, sqlFlavor.sqlite), () => {
+      .with(P.union(sqlFlavor.postgres, sqlFlavor.sqlite), () => {
         return this.escape(identifier, "\"", "\"\"");
       })
       .with(sqlFlavor.mysql, () => {
@@ -77,6 +96,11 @@ export default class SqlEscaper {
         const escapedAlias = this.escapeIdentifier(alias.trim(), flavor);
         return `${escapedColumn} AS ${escapedAlias}`;
       } else {
+        const columnParts = identifier.split(".");
+        if (columnParts.length > 1) {
+          return columnParts.map(part => this.escapeIdentifier(part.trim(), flavor)).join(".");
+        }
+
         return this.escapeIdentifier(identifier.trim(), flavor);
       }
     });
