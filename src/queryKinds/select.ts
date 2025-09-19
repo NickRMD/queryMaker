@@ -3,7 +3,6 @@ import SqlEscaper from "../sqlEscaper";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
 import OrderBy from "../types/OrderBy.js";
-import sqlFlavor from "../types/sqlFlavor";
 import QueryDefinition from "./query.js";
 
 /**
@@ -88,14 +87,6 @@ export default class SelectQuery extends QueryDefinition {
   private disabledAnalysis: boolean = false;
 
   /**
-    * List of schemas for using in query
-    */
-  private schemas: string[] = [];
-
-
-  private flavor = sqlFlavor.postgres;
-
-  /**
     * Creates a new SelectQuery instance.
     * @param from The table to select from.
     * @param alias An optional alias for the table.
@@ -107,19 +98,11 @@ export default class SelectQuery extends QueryDefinition {
     groupBySelectFields: boolean = false
   ) {
     super();
-    this.table = from || '';
+    const escapedFrom = from ? SqlEscaper.escapeTableName(from, this.flavor) : '';
+    this.table = escapedFrom;
     this.tableAlias = alias;
     this.selectFields = ['*'];
     this.groupBySelectFields = groupBySelectFields;
-  }
-
-  /**
-    * Set schemas to be used in the query.
-    * This is useful for databases that support multiple schemas.
-    */
-  public schema(...schemas: string[]): this {
-    this.schemas = schemas;
-    return this;
   }
 
   /**
@@ -160,7 +143,8 @@ export default class SelectQuery extends QueryDefinition {
     * @returns The current SelectQuery instance for chaining.
     */
   public from(table: string, alias: string | null = null): this {
-    this.table = table;
+    const escapedTable = SqlEscaper.escapeTableName(table, this.flavor);
+    this.table = escapedTable;
     this.tableAlias = alias;
     return this;
   }
@@ -276,9 +260,15 @@ export default class SelectQuery extends QueryDefinition {
     join: Join | Join[] 
   ): this {
     if (Array.isArray(join)) {
-      this.joins.push(...join);
+      this.joins.push(...join.map(j => ({
+        ...j,
+        table: SqlEscaper.escapeTableName(j.table, this.flavor),
+      })));
     } else {
-      this.joins.push(join);
+      this.joins.push({
+        ...join,
+        table: SqlEscaper.escapeTableName(join.table, this.flavor),
+      });
     }
     return this;
   }
@@ -293,9 +283,17 @@ export default class SelectQuery extends QueryDefinition {
     orderBy: OrderBy | OrderBy[]
   ): this {
     if (Array.isArray(orderBy)) {
-      this.orderBys.push(...orderBy);
+      this.orderBys.push(
+        ...orderBy.map(ob => ({
+          ...ob,
+          field: SqlEscaper.escapeSelectIdentifiers([ob.field], this.flavor)[0]!
+        }))
+      );
     } else {
-      this.orderBys.push(orderBy);
+      this.orderBys.push({
+        ...orderBy,
+        field: SqlEscaper.escapeSelectIdentifiers([orderBy.field], this.flavor)[0]!
+      });
     }
     return this;
   }
@@ -681,6 +679,10 @@ export default class SelectQuery extends QueryDefinition {
       .join('\n');
 
     this.builtQuery = query.trim();
+
+    this.builtQuery = SqlEscaper.appendSchemas(
+      this.builtQuery, this.schemas
+    );
 
     if (this.disabledAnalysis) {
       return { text: this.builtQuery, values };

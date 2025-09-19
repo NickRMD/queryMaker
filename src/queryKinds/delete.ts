@@ -1,4 +1,5 @@
 import CteMaker, { Cte } from "../cteMaker.js";
+import SqlEscaper from "../sqlEscaper";
 import Statement from "../statementMaker.js";
 import UsingTable from "../types/UsingTable.js";
 import QueryDefinition from "./query.js";
@@ -32,7 +33,7 @@ export default class DeleteQuery extends QueryDefinition {
     */
   constructor(from?: string, alias: string | null = null) {
     super();
-    this.deletingFrom = from || '';
+    this.deletingFrom = SqlEscaper.escapeTableName(from || '', this.flavor);
     this.deletingFromAlias = alias;
   }
 
@@ -60,7 +61,7 @@ export default class DeleteQuery extends QueryDefinition {
     * @returns The current DeleteQuery instance for method chaining.
     */
   public from(table: string, alias: string | null = null): this {
-    this.deletingFrom = table;
+    this.deletingFrom = SqlEscaper.escapeTableName(table, this.flavor);
     this.deletingFromAlias = alias;
     return this;
   }
@@ -73,16 +74,25 @@ export default class DeleteQuery extends QueryDefinition {
     */
   public using(tables: string | UsingTable | UsingTable[]): this {
     if (Array.isArray(tables)) {
-      this.usingTables.push(...tables);
+      this.usingTables.push(...tables.map(t => ({
+        table: SqlEscaper.escapeTableName(t.table, this.flavor),
+        alias: t.alias || null
+      })));
     } else if (typeof tables === 'string') {
       const tableParts = tables.split(' ');
       if (tableParts[0] && tableParts[0]?.trim() !== '') {
-        this.usingTables.push({ table: tableParts[0], alias: tableParts[1] || null });
+        this.usingTables.push({
+          table: SqlEscaper.escapeTableName(tableParts[0], this.flavor),
+          alias: tableParts[1] || null 
+        });
       } else {
         throw new Error('Invalid table name provided to USING clause.');
       }
     } else {
-      this.usingTables.push(tables);
+      this.usingTables.push({
+        table: SqlEscaper.escapeTableName(tables.table, this.flavor),
+        alias: tables.alias || null
+      });
     }
     return this;
   }
@@ -123,9 +133,9 @@ export default class DeleteQuery extends QueryDefinition {
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.returningFields.push(...fields);
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
-      this.returningFields.push(fields);
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
     }
     return this;
   }
@@ -250,6 +260,10 @@ export default class DeleteQuery extends QueryDefinition {
       returningClause
     ].filter(part => part !== '')
       .join('\n ');
+
+    this.builtQuery = SqlEscaper.appendSchemas(
+      this.builtQuery, this.schemas
+    );
 
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(this.builtQuery, values, deepAnalysis);
     this.builtQuery = analyzed.text;
