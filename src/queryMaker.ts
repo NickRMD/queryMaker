@@ -4,6 +4,7 @@ import InsertQuery from "./queryKinds/insert.js";
 import SelectQuery from "./queryKinds/select.js";
 import UpdateQuery from "./queryKinds/update.js";
 import Statement from "./statementMaker.js";
+import sqlFlavor from "./types/sqlFlavor";
 
 /**
   * QueryMaker is a factory class that provides static methods to create instances of different query types.
@@ -18,7 +19,8 @@ class Query {
     * @param deepAnalysisDefault - Optional boolean to set the default deep analysis behavior for query building.
     */
   constructor(
-    private readonly deepAnalysisDefault: boolean = false
+    private readonly deepAnalysisDefault: boolean = false,
+    private readonly flavor = sqlFlavor.postgres
   ) {}
 
   /**
@@ -27,6 +29,7 @@ class Query {
     */
   public get select(): SelectQuery {
     const selectQuery = new SelectQuery();
+    (selectQuery as any).flavor = this.flavor;
     selectQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
       return SelectQuery.prototype.build.call(selectQuery, deepAnalysis);
     }
@@ -39,6 +42,7 @@ class Query {
     */
   public get delete(): DeleteQuery {
     const deleteQuery = new DeleteQuery();
+    (deleteQuery as any).flavor = this.flavor;
     deleteQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
       return DeleteQuery.prototype.build.call(deleteQuery, deepAnalysis);
     }
@@ -51,6 +55,7 @@ class Query {
     */
   public get update(): UpdateQuery {
     const updateQuery = new UpdateQuery();
+    (updateQuery as any).flavor = this.flavor;
     updateQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
       return UpdateQuery.prototype.build.call(updateQuery, deepAnalysis);
     }
@@ -63,6 +68,7 @@ class Query {
     */
   public get create(): InsertQuery {
     const insertQuery = new InsertQuery();
+    (insertQuery as any).flavor = this.flavor;
     insertQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
       return InsertQuery.prototype.build.call(insertQuery, deepAnalysis);
     }
