@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsup --config tsup.config.ts --format esm",
     "start": "node dist/index.js",
     "build:prod": "tsup --config tsup.config.ts",
     "publish:prod": "npm run build:prod && npm publish --access public",
@@ -46,11 +46,35 @@
   "author": "Nicolas R. M. Dias <nicolasrenanmachado@gmail.com>",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@swc/core": "^1.13.5",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
     "terser": "^5.44.0",
+    "tslib": "^2.8.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "zod": "^4.1.9"
   },
   "dependencies": {
     "ts-pattern": "^5.8.0"
+  },
+  "peerDependencies": {
+    "class-transformer": ">=0.5.0",
+    "class-validator": ">=0.14.0",
+    "zod": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    },
+    "class-validator": {
+      "optional": true
+    },
+    "class-transformer": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=21"
   }
 }
