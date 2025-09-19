@@ -31,6 +31,11 @@ export default class UpdateQuery extends QueryDefinition {
   /** Optional Common Table Expressions (CTEs) for the query. */
   private ctes: CteMaker | null = null;
 
+  /**
+    * Creates an instance of UpdateQuery.
+    * @param table - The name of the table to update.
+    * @param alias - An optional alias for the table.
+    */
   constructor(table?: string, alias?: string) {
     super();
     this.table = table || '';
@@ -40,6 +45,8 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Adds Common Table Expressions (CTEs) to the query.
     * Accepts a CteMaker instance, a single Cte, or an array of Ctes.
+    * @param ctes - The CTEs to be added to the query.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public with(ctes: CteMaker | Cte | Cte[]): this {
     if (ctes instanceof CteMaker) {
@@ -54,6 +61,9 @@ export default class UpdateQuery extends QueryDefinition {
 
   /**
     * Specifies the table to update and an optional alias.
+    * @param table - The name of the table.
+    * @param alias - An optional alias for the table.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public from(table: string, alias: string | null = null): this {
     this.table = table;
@@ -63,6 +73,9 @@ export default class UpdateQuery extends QueryDefinition {
 
   /**
     * Specifies the USING clause table and an optional alias.
+    * @param table - The name of the table for the USING clause.
+    * @param alias - An optional alias for the USING table.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public using(table: string, alias: string | null = null): this {
     this.usingTable = table;
@@ -73,6 +86,8 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Adds JOIN clauses to the update query.
     * Accepts either a single Join object or an array of Join objects.
+    * @param join - The JOIN clause(s) to be added.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public join(join: Join | Join[]): this {
     if (Array.isArray(join)) {
@@ -86,6 +101,8 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Specifies the SET values for the update.
     * Accepts either a single SetValue object or an array of SetValue objects.
+    * @param values - The SET value(s) to be added.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public set(values: SetValue | SetValue[]): this {
     if (Array.isArray(values)) {
@@ -101,6 +118,9 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Adds a SET clause with a value from another column or expression.
     * Example: addSet('column1', 'column2 + 1') results in "SET column1 = column2 + 1".
+    * @param column - The column to be set.
+    * @param from - The column or expression to set the value from.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public addSet(column: string, from: string): this {
     this.setValues.push({ setColumn: column, from });
@@ -110,6 +130,9 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Adds a SET clause with a direct value.
     * Example: addSetValue('column1', 42) results in "SET column1 = $1" with 42 as a parameter.
+    * @param column - The column to be set.
+    * @param value - The value to set the column to.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public addSetValue(column: string, value: any): this {
     this.setValues.push({ setColumn: column, value });
@@ -119,6 +142,9 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Specifies the WHERE clause for the update.
     * Accepts either a Statement object or a raw SQL string with optional parameters.
+    * @param statement - The WHERE clause as a Statement or raw SQL string.
+    * @param values - Optional parameters for the raw SQL string.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public where(statement: Statement | string, ...values: any[]): this {
     if (typeof statement === 'string') {
@@ -132,6 +158,8 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Allows using a callback to build the WHERE clause with a Statement object.
     * Example: useStatement(stmt => stmt.raw('id = $1', 42)) results in "WHERE id = $1" with 42 as a parameter.
+    * @param statement - A callback function that receives a Statement object.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public useStatement(statement: (stmt: Statement) => Statement | void): this {
     const stmt = new Statement();
@@ -142,6 +170,8 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Specifies the RETURNING fields for the update.
     * Accepts either a single field name or an array of field names.
+    * @param fields - The field(s) to be returned after the update.
+    * @returns The current UpdateQuery instance for method chaining.
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
@@ -156,6 +186,9 @@ export default class UpdateQuery extends QueryDefinition {
     * Builds the final SQL UPDATE query string and collects the parameters.
     * It handles CTEs, SET clauses, JOINs, WHERE conditions, and RETURNING fields.
     * The method ensures proper parameter indexing and returns the query text and values.
+    * @param deepAnalysis - If true, performs a deeper analysis for duplicate parameters.
+    * @returns An object containing the built query text and its parameters.
+    * @throws Error if no table or SET values are specified.
     */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (this.table.trim() === '') {
@@ -262,6 +295,7 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Returns the built SQL query string.
     * If the query is not yet built, it triggers the build process.
+    * @returns The SQL query string.
     */
   public toSQL(): string {
     return this.build().text;
@@ -270,6 +304,7 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Indicates whether the query has been built.
     * Returns true if the builtQuery property is not null.
+    * @returns A boolean indicating if the query is built.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
@@ -277,6 +312,7 @@ export default class UpdateQuery extends QueryDefinition {
 
   /**
     * This an UPDATE query.
+    * @returns The string 'UPDATE'.
     */
   public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
     return 'UPDATE';
@@ -284,6 +320,7 @@ export default class UpdateQuery extends QueryDefinition {
 
   /**
     * Provides access to the current query definition instance.
+    * @returns The current UpdateQuery instance.
     */
   public get query(): QueryDefinition {
     return this;
@@ -292,6 +329,7 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Invalidates the current state of the query definition, forcing a rebuild on the next operation.
     * It also invalidates any associated WHERE statements and CTE queries.
+    * @returns void
     */
   public invalidate(): void {
     this.builtQuery = null;
@@ -306,6 +344,7 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Resets the query definition to its initial state.
     * Clears all properties related to the query configuration.
+    * @returns void
     */
   public reset(): void {
     this.table = '';
@@ -323,6 +362,7 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Retrieves the parameters associated with the query.
     * If the query is not yet built, it triggers the build process.
+    * @returns An array of parameters for the query.
     */
   public getParams(): any[] {
     return this.build().values;
@@ -331,6 +371,7 @@ export default class UpdateQuery extends QueryDefinition {
   /**
     * Creates a deep copy of the current UpdateQuery instance.
     * This is useful for preserving the current state of the query while making modifications to a clone.
+    * @returns A new UpdateQuery instance that is a clone of the current instance.
     */
   public clone(): UpdateQuery {
     const cloned = new UpdateQuery(this.table, this.tableAlias || undefined);

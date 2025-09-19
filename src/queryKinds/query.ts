@@ -1,22 +1,37 @@
 import deepEqual from "../deepEqual.js";
 
 /**
+  * An array of function names that can be used to execute SQL queries.
+  * These functions are commonly found in database client libraries.
+  */
+const functionNames = ['execute', 'query', 'run', 'all', 'get'] as const;
+
+/**
+  * FunctionDeclaration type defines the signature for functions that execute SQL queries.
+  * It takes a query string and an array of parameters, and returns a promise that resolves
+  * to either an array of results or an object containing a rows property with the results.
+  */
+type FunctionDeclaration<T> = (query: string, params: any[]) => Promise<T[] | { rows: T[] }>;
+
+/**
   * QueryExecutorObject interface defines the structure for an object that can execute SQL queries.
   * It includes optional methods for executing queries in different ways, as well as an optional manager property.
   */
-interface QueryExecutorObject {
-  execute?: (query: string, params: any[]) => Promise<any>;
-  query?: (query: string, params: any[]) => Promise<any>;
-  run?: (query: string, params: any[]) => Promise<any>;
-  all?: (query: string, params: any[]) => Promise<any>;
-  get?: (query: string, params: any[]) => Promise<any>;
-  manager?: QueryExecutor;
+interface QueryExecutorObject<T> {
+  execute?: FunctionDeclaration<T>;
+  query?: FunctionDeclaration<T>;
+  run?: FunctionDeclaration<T>;
+  all?: FunctionDeclaration<T>;
+  get?: FunctionDeclaration<T>;
+  manager?: QueryExecutor<T>;
 }
 
 /**
   * QueryExecutor type can be either a QueryExecutorObject or a function that executes a query.
   */
-type QueryExecutor = QueryExecutorObject | ((query: string, params: any[]) => Promise<any>);
+type QueryExecutor<T> = 
+  QueryExecutorObject<T> 
+  | FunctionDeclaration<T>;
 
 /**
   * Abstract class QueryDefinition serves as a blueprint for different types of SQL query definitions.
@@ -80,6 +95,7 @@ export default abstract class QueryDefinition {
   /**
     * Builds the SQL query and re-analyzes it for duplicate parameters.
     * This method ensures that the query is optimized by removing redundant parameters.
+    * @returns An object containing the optimized query text and its parameters.
     */
   public buildReanalyze(): { text: string; values: any[] } {
     const query = this.build();
@@ -90,30 +106,43 @@ export default abstract class QueryDefinition {
     * Executes the built SQL query using the provided query executor.
     * The query executor can be a function or an object with methods to execute the query.
     * The optional noManager parameter can be used to bypass the manager property if present.
+    * @param queryExecutor The executor to run the SQL query.
+    * @param noManager If true, bypasses the manager property of the executor object.
+    * @returns A promise that resolves with the result of the query execution.
+    * @throws An error if the provided query executor is invalid.
     */
-  public async execute(
-    queryExecutor: QueryExecutor,
+  public async execute<T = any>(
+    queryExecutor: QueryExecutor<T>,
     noManager: boolean = false
-  ): Promise<any> {
+  ): Promise<T[]> {
     if (typeof queryExecutor === 'function') {
-      return queryExecutor(this.toSQL(), this.getParams());
+      const result = await queryExecutor(this.toSQL(), this.getParams());
+      if ((result as any)?.rows) {
+        return (result as any).rows as T[];
+      } else return result as T[];
     }
 
     if (!noManager && queryExecutor?.manager && typeof queryExecutor?.manager === 'object') {
-      return this.execute(queryExecutor.manager);
-    } else if (queryExecutor?.execute && typeof queryExecutor?.execute === 'function') {
-      return queryExecutor.execute(this.toSQL(), this.getParams());
-    } else if (queryExecutor?.query && typeof queryExecutor?.query === 'function') {
-      return queryExecutor.query(this.toSQL(), this.getParams());
-    } else if (queryExecutor?.run && typeof queryExecutor?.run === 'function') {
-      return queryExecutor.run(this.toSQL(), this.getParams());
-    } else if (queryExecutor?.all && typeof queryExecutor?.all === 'function') {
-      return queryExecutor.all(this.toSQL(), this.getParams());
-    } else if (queryExecutor?.get && typeof queryExecutor?.get === 'function') {
-      return queryExecutor.get(this.toSQL(), this.getParams());
+      for (const functionName of functionNames) {
+        if (typeof queryExecutor.manager[functionName] === 'function') {
+          const result = await queryExecutor.manager[functionName]!(this.toSQL(), this.getParams());
+          if ((result as any)?.rows) {
+            return (result as any).rows as T[];
+          } else return result as T[];
+        }
+      }
     } else {
-      throw new Error('Invalid query executor provided.');
+      for (const functionName of functionNames) {
+        if (typeof queryExecutor[functionName] === 'function') {
+          const result = await queryExecutor[functionName]!(this.toSQL(), this.getParams());
+          if ((result as any)?.rows) {
+            return (result as any).rows as T[];
+          } else return result as T[];
+        }
+      }
     }
+
+    throw new Error('Invalid query executor provided.');
   }
 
   /**

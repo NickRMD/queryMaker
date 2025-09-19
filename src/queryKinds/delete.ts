@@ -25,6 +25,11 @@ export default class DeleteQuery extends QueryDefinition {
   /** Optional Common Table Expressions (CTEs) for the query. */
   private ctes: CteMaker | null = null;
 
+  /** 
+    * Creates an instance of DeleteQuery.
+    * @param from - The name of the table from which records will be deleted.
+    * @param alias - An optional alias for the table.
+    */
   constructor(from?: string, alias: string | null = null) {
     super();
     this.deletingFrom = from || '';
@@ -34,6 +39,8 @@ export default class DeleteQuery extends QueryDefinition {
   /** 
     * Adds Common Table Expressions (CTEs) to the query.
     * Accepts a CteMaker instance, a single Cte, or an array of Ctes.
+    * @param ctes - The CTEs to be added to the query.
+    * @returns The current DeleteQuery instance for method chaining.
     */
   public with(ctes: CteMaker | Cte | Cte[]): this {
     if (ctes instanceof CteMaker) {
@@ -46,14 +53,24 @@ export default class DeleteQuery extends QueryDefinition {
     return this;
   }
 
-  /** Specifies the table from which records will be deleted, with an optional alias. */
+  /** 
+    * Specifies the table from which records will be deleted, with an optional alias.
+    * @param table - The name of the table.
+    * @param alias - An optional alias for the table.
+    * @returns The current DeleteQuery instance for method chaining.
+    */
   public from(table: string, alias: string | null = null): this {
     this.deletingFrom = table;
     this.deletingFromAlias = alias;
     return this;
   }
 
-  /** Adds tables to the USING clause. Accepts a string, a UsingTable object, or an array of UsingTable objects. */
+  /** 
+    * Adds tables to the USING clause. Accepts a string, a UsingTable object, or an array of UsingTable objects.
+    * @param tables - The table(s) to be added to the USING clause.
+    * @returns The current DeleteQuery instance for method chaining.
+    * @throws Error if an invalid table name is provided in string format.
+    */
   public using(tables: string | UsingTable | UsingTable[]): this {
     if (Array.isArray(tables)) {
       this.usingTables.push(...tables);
@@ -73,6 +90,9 @@ export default class DeleteQuery extends QueryDefinition {
   /**
     * Specifies the WHERE clause for the DELETE query.
     * Accepts either a Statement object or a raw SQL string with optional parameters.
+    * @param statement - The WHERE clause as a Statement or raw SQL string.
+    * @param values - Optional parameters for the raw SQL string.
+    * @returns The current DeleteQuery instance for method chaining.
     */
   public where(statement: Statement | string, ...values: any[]): this {
     if (typeof statement === 'string') {
@@ -86,6 +106,8 @@ export default class DeleteQuery extends QueryDefinition {
   /**
     * Allows building the WHERE clause using a callback function that receives a Statement object.
     * This provides a more fluent interface for constructing complex WHERE conditions.
+    * @param statement - A callback function that takes a Statement object and returns a modified Statement.
+    * @returns The current DeleteQuery instance for method chaining.
     */
   public useStatement(statement: (stmt: Statement) => Statement | void): this {
     const stmt = new Statement();
@@ -95,7 +117,9 @@ export default class DeleteQuery extends QueryDefinition {
 
   /** 
     * Specifies the fields to be returned after the delete operation. 
-    * Accepts a string or an array of strings. 
+    * Accepts a string or an array of strings.
+    * @param fields - The field(s) to be returned.
+    * @returns The current DeleteQuery instance for method chaining.
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
@@ -109,6 +133,7 @@ export default class DeleteQuery extends QueryDefinition {
   /**
     * Creates a deep clone of the current DeleteQuery instance.
     * This is useful for creating variations of the query without modifying the original.
+    * @returns A new DeleteQuery instance with the same properties as the original.
     */
   public clone(): DeleteQuery {
     const cloned = new DeleteQuery(this.deletingFrom, this.deletingFromAlias);
@@ -122,6 +147,7 @@ export default class DeleteQuery extends QueryDefinition {
   /**
     * Resets the state of the DeleteQuery instance, clearing all configurations.
     * This allows reusing the instance for building a new query from scratch.
+    * @returns void
     */
   public reset(): void {
     this.deletingFrom = '';
@@ -135,6 +161,7 @@ export default class DeleteQuery extends QueryDefinition {
 
   /**
     * Indicates whether the query has been built and is ready for execution.
+    * @returns True if the query has been built; otherwise, false.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
@@ -142,6 +169,7 @@ export default class DeleteQuery extends QueryDefinition {
 
   /**
     * This a DELETE query.
+    * @returns The kind of SQL operation, which is 'DELETE' for this class.
     */
   public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
     return 'DELETE';
@@ -149,6 +177,7 @@ export default class DeleteQuery extends QueryDefinition {
 
   /**
     * Provides access to the current DeleteQuery instance.
+    * @returns The current DeleteQuery instance.
     */
   public get query(): QueryDefinition {
     return this;
@@ -156,6 +185,7 @@ export default class DeleteQuery extends QueryDefinition {
 
   /**
     * Invalidates the current state of the query, forcing a rebuild on the next operation.
+    * @returns void
     */
   public invalidate(): void {
     this.builtQuery = null;
@@ -170,6 +200,9 @@ export default class DeleteQuery extends QueryDefinition {
   /**
     * Builds the SQL DELETE query and returns an object containing the query text and its parameters.
     * The optional deepAnalysis parameter can be used to control the depth of analysis during the build process.
+    * @param deepAnalysis - If true, performs a deeper analysis for duplicate parameters.
+    * @returns An object containing the query text and its parameters.
+    * @throws Error if no table is specified for the DELETE query.
     */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (!this.deletingFrom) {
@@ -223,10 +256,20 @@ export default class DeleteQuery extends QueryDefinition {
     return { text: this.builtQuery, values: analyzed.values };
   }
 
+  /**
+    * Builds the SQL DELETE query and returns the query text as a string.
+    * This method is useful for obtaining the raw SQL query without parameters.
+    * @returns The SQL DELETE query as a string.
+    */
   public toSQL(): string {
     return this.build().text;
   }
 
+  /**
+    * Builds the SQL DELETE query and returns the parameters as an array.
+    * This method is useful for obtaining the parameters to be used with the SQL query.
+    * @returns An array of parameters for the SQL DELETE query.
+    */
   public getParams(): any[] {
     return this.build().values;
   }
