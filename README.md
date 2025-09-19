@@ -91,8 +91,22 @@ import Query from 'sqm';
 const updateQuery = Query.update
     .from('users')
     .set([
-        { column: 'name', value: 'Jane Doe' },
-        { column: 'age', value: 31 }
+        { setColumn: 'name', value: 'Jane Doe' },
+        { setColumn: 'age', value: 31 }
+        // ... more values
+    ])
+    .where(
+        Query.statement
+            .and('id = ?', 1)
+    );
+
+// OR
+
+const updateQuery = Query.update
+    .from('users')
+    .set([
+        name: 'Jane Doe',
+        age: 31
         // ... more values
     ])
     .where(

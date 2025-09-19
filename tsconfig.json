@@ -1,6 +1,7 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
+
     // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
@@ -31,7 +32,9 @@
     "importHelpers": true,
     "stripInternal": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "tests"]

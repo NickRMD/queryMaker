@@ -1,4 +1,5 @@
 import CteMaker, { Cte } from "../cteMaker.js";
+import SqlEscaper from "../sqlEscaper";
 import ColumnValue from "../types/ColumnValue";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
@@ -28,7 +29,7 @@ export default class InsertQuery extends QueryDefinition {
     */
   constructor(table?: string) {
     super();
-    this.table = table || '';
+    this.table = SqlEscaper.escapeTableName(table || '', this.flavor);
   }
 
   /**
@@ -54,7 +55,7 @@ export default class InsertQuery extends QueryDefinition {
     * @returns The current InsertQuery instance for method chaining.
     */
   public into(table: string): this {
-    this.table = table;
+    this.table = SqlEscaper.escapeTableName(table, this.flavor);
     return this;
   }
 
@@ -68,12 +69,14 @@ export default class InsertQuery extends QueryDefinition {
     if (Array.isArray(columnValues)) {
       this.columnValues = columnValues
         .filter(v => v.value !== undefined)
-        .map(v => ({ ...v, value: v.value ?? null }));
+        .map(v => ({ 
+          column: SqlEscaper.escapeIdentifier(v.column, this.flavor), value: v.value ?? null 
+        }));
     } else {
       this.columnValues = Object.entries(columnValues)
         .filter(([, value]) => value !== undefined)
         .map(([column, value]) => ({
-          column,
+          column: SqlEscaper.escapeIdentifier(column, this.flavor),
           value: value ?? null
         }));
     }
@@ -98,9 +101,9 @@ export default class InsertQuery extends QueryDefinition {
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.returningFields = fields;
+      this.returningFields = SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
     } else {
-      this.returningFields = [fields];
+      this.returningFields = SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
     }
     return this;
   }
@@ -237,6 +240,10 @@ export default class InsertQuery extends QueryDefinition {
       returningClause
     ].join('\n').trim();
     this.builtQuery = text;
+
+    this.builtQuery = SqlEscaper.appendSchemas(
+      this.builtQuery, this.schemas
+    );
 
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
       this.builtQuery,

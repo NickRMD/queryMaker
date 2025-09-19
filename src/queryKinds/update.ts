@@ -1,4 +1,5 @@
 import CteMaker, { Cte } from "../cteMaker.js";
+import SqlEscaper from "../sqlEscaper";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
 import SetValue from "../types/SetValue";
@@ -38,7 +39,7 @@ export default class UpdateQuery extends QueryDefinition {
     */
   constructor(table?: string, alias?: string) {
     super();
-    this.table = table || '';
+    this.table = SqlEscaper.escapeTableName(table || '', this.flavor);
     this.tableAlias = alias || null;
   }
 
@@ -66,7 +67,7 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns The current UpdateQuery instance for method chaining.
     */
   public from(table: string, alias: string | null = null): this {
-    this.table = table;
+    this.table = SqlEscaper.escapeTableName(table, this.flavor);
     this.tableAlias = alias;
     return this;
   }
@@ -78,7 +79,7 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns The current UpdateQuery instance for method chaining.
     */
   public using(table: string, alias: string | null = null): this {
-    this.usingTable = table;
+    this.usingTable = SqlEscaper.escapeTableName(table, this.flavor);
     this.usingAlias = alias;
     return this;
   }
@@ -91,9 +92,15 @@ export default class UpdateQuery extends QueryDefinition {
     */
   public join(join: Join | Join[]): this {
     if (Array.isArray(join)) {
-      this.joins.push(...join);
+      this.joins.push(...join.map(j => ({
+        ...j,
+        table: SqlEscaper.escapeTableName(j.table, this.flavor),
+      })));
     } else {
-      this.joins.push(join);
+      this.joins.push({
+        ...join,
+        table: SqlEscaper.escapeTableName(join.table, this.flavor),
+      });
     }
     return this;
   }
@@ -108,9 +115,17 @@ export default class UpdateQuery extends QueryDefinition {
     if (Array.isArray(values)) {
       this.setValues = values
         .filter(v => v.value !== undefined)
-        .map(v => ({ ...v, value: v.value ?? null }));
+        .map(v => ({ 
+          setColumn: v.setColumn ? SqlEscaper.escapeTableName(v.setColumn, this.flavor) : '', 
+          from: v.from ? SqlEscaper.escapeTableName(v.from, this.flavor) : undefined as any,
+          value: v.value ?? null 
+        }));
     } else if (values.value !== undefined) {
-      this.setValues = [values ?? null];
+      this.setValues = [{
+        setColumn: values.setColumn ? SqlEscaper.escapeTableName(values.setColumn, this.flavor) : '',
+        from: values.from ? SqlEscaper.escapeTableName(values.from, this.flavor) : undefined as any,
+        value: values.value ?? null
+      }];
     }
     return this;
   }
@@ -123,7 +138,10 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns The current UpdateQuery instance for method chaining.
     */
   public addSet(column: string, from: string): this {
-    this.setValues.push({ setColumn: column, from });
+    this.setValues.push({ 
+      setColumn: SqlEscaper.escapeTableName(column, this.flavor),
+      from: SqlEscaper.escapeTableName(from, this.flavor)
+    });
     return this;
   }
 
@@ -135,7 +153,10 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns The current UpdateQuery instance for method chaining.
     */
   public addSetValue(column: string, value: any): this {
-    this.setValues.push({ setColumn: column, value });
+    this.setValues.push({ 
+      setColumn: SqlEscaper.escapeTableName(column, this.flavor),
+      value 
+    });
     return this;
   }
 
@@ -175,9 +196,9 @@ export default class UpdateQuery extends QueryDefinition {
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.returningFields.push(...fields);
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
-      this.returningFields.push(fields);
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
     }
     return this;
   }
@@ -285,6 +306,10 @@ export default class UpdateQuery extends QueryDefinition {
       returningClause
     ].filter(part => part !== '')
       .join('\n');
+
+    this.builtQuery = SqlEscaper.appendSchemas(
+      this.builtQuery, this.schemas
+    );
 
     const allValues = [...cteValues, ...setValues, ...values];
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(this.builtQuery, allValues, deepAnalysis);
