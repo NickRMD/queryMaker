@@ -1,4 +1,11 @@
+import { ValidatorOptions } from "class-validator";
 import deepEqual from "../deepEqual.js";
+import { getClassValidator, getZod } from "../getOptionalPackages";
+// Import types only since they are used for type checking only
+// and zod is optional peer dependency
+import type z from "zod";
+import type { ZodObject } from "zod";
+import sqlFlavor from "../types/sqlFlavor";
 
 /**
   * An array of function names that can be used to execute SQL queries.
@@ -34,13 +41,22 @@ type QueryExecutor<T> =
   | FunctionDeclaration<T>;
 
 /**
+  * SchemaType is a conditional type that infers the type of data based on the provided schema.
+  * It supports both Zod schemas and class-validator classes.
+  */
+type SchemaType<S> =
+  S extends ZodObject ? z.infer<S> :
+  S extends { new(): infer U } ? U :
+  never;
+
+/**
   * Abstract class QueryDefinition serves as a blueprint for different types of SQL query definitions.
   * It defines the essential methods and properties that any concrete query class must implement.
   * This includes methods for building the SQL query, executing it, cloning the query definition,
   * resetting its state, and checking if the query is complete.
   * The class also provides a method to re-analyze the query for duplicate parameters to optimize parameter usage.
   */
-export default abstract class QueryDefinition {
+export default abstract class QueryDefinition<S = any> {
 
   /**
     * Converts the query definition to its SQL string representation.
@@ -88,14 +104,122 @@ export default abstract class QueryDefinition {
   public abstract get query(): QueryDefinition;
 
   /**
+    * The SQL flavor to use for escaping identifiers.
+    * Default is PostgreSQL.
+    */
+  protected flavor: sqlFlavor = sqlFlavor.postgres;
+
+  protected schemas: string[] = [];
+
+  /**
+    * Set schemas to be used in the query.
+    * This is useful for databases that support multiple schemas.
+    * NOTICE: SQL Injection is not checked in schema names. Be sure to use only trusted schema names.
+    * @param schemas The schemas to set.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public schema(...schemas: string[]): this {
+    this.schemas = schemas;
+    return this;
+  }
+
+  public addSchema(...schemas: string[]): this {
+    this.schemas.push(...schemas);
+    return this;
+  }
+
+  /**
     * Invalidates the current state of the query definition, forcing a rebuild on the next operation.
     */
   public abstract invalidate(): void;
 
   /**
+    * True if the schema to validate against is a Zod schema, false otherwise.
+    */
+  private isZodSchema: boolean = false;
+
+  /**
+    * True if the schema to validate against is a class-validator schema, false otherwise.
+    */
+  private isClassValidatorSchema: boolean = false;
+
+  /**
+    * The schema to validate against, can be either a Zod schema or a class-validator class.
+    * Null if no schema is set.
+    */
+  private validatorSchema: any = null;
+
+  /**
+    * Options for class-validator validation.
+    * Default options are set to whitelist properties, forbid non-whitelisted properties,
+    * and exclude the target object from validation errors.
+    */
+  private classValidatorOptions: ValidatorOptions = {
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    validationError: { target: false }
+  };
+
+  /**
+    * Use zod or class-validator + class-transformer to validate the input schema.
+    * @param schema The schema to validate against.
+    * @returns A promise that resolves if the schema is valid, or rejects with validation errors.
+    * @throws An error if no validation library is available.
+    */
+  public validate<T extends ZodObject | (new (...args: any[]) => any)>(
+    schema: T
+  ): QueryDefinition<SchemaType<T>> {
+    if ((schema as any).safeParse) {
+      this.isZodSchema = true;
+    } else {
+      this.isClassValidatorSchema = true;
+    }
+    this.validatorSchema = schema;
+
+    return this;
+  }
+
+  /**
+    * Configures options for class-validator validation.
+    * @param config The configuration options for class-validator.
+    * @returns The current QueryDefinition instance for method chaining.
+    */
+  public classValidatorConfig(
+    config: ValidatorOptions
+  ) {
+    this.classValidatorOptions = config;
+    return this;
+  }
+
+  /**
+    * Handles validation of the input data against the set schema.
+    * Supports both Zod schemas and class-validator classes.
+    * @param input The data to validate.
+    * @returns A promise that resolves if the data is valid, or rejects with validation errors.
+    * @throws An error if no validation library is available.
+    */
+  private async handleValidation(input: any) {
+    if (this.validatorSchema) {
+      if (this.isZodSchema) {
+        const zod = await getZod();
+        await zod.array(this.validatorSchema).parseAsync(input);
+      } else if (this.isClassValidatorSchema) {
+        const { classValidator, classTransformer } = await getClassValidator();
+        const { validateOrReject } = classValidator;
+        const transformed = classTransformer.plainToInstance(this.validatorSchema, input);
+        for (const item of transformed) {
+          // Use class-validator to validate each item
+          await validateOrReject(item as any, this.classValidatorOptions);
+        }
+      }
+    }
+  }
+
+  /**
     * Builds the SQL query and re-analyzes it for duplicate parameters.
     * This method ensures that the query is optimized by removing redundant parameters.
     * @returns An object containing the optimized query text and its parameters.
+    * @throws An error if the build process fails.
     */
   public buildReanalyze(): { text: string; values: any[] } {
     const query = this.build();
@@ -109,17 +233,21 @@ export default abstract class QueryDefinition {
     * @param queryExecutor The executor to run the SQL query.
     * @param noManager If true, bypasses the manager property of the executor object.
     * @returns A promise that resolves with the result of the query execution.
-    * @throws An error if the provided query executor is invalid.
+    * @throws An error if the provided query executor is invalid or if validation fails.
     */
-  public async execute<T = any>(
+  public async execute<T = S>(
     queryExecutor: QueryExecutor<T>,
     noManager: boolean = false
   ): Promise<T[]> {
     if (typeof queryExecutor === 'function') {
       const result = await queryExecutor(this.toSQL(), this.getParams());
       if ((result as any)?.rows) {
+        await this.handleValidation((result as any).rows);
         return (result as any).rows as T[];
-      } else return result as T[];
+      } else {
+        await this.handleValidation(result);
+        return result as T[];
+      }
     }
 
     if (!noManager && queryExecutor?.manager && typeof queryExecutor?.manager === 'object') {
@@ -127,8 +255,12 @@ export default abstract class QueryDefinition {
         if (typeof queryExecutor.manager[functionName] === 'function') {
           const result = await queryExecutor.manager[functionName]!(this.toSQL(), this.getParams());
           if ((result as any)?.rows) {
+            await this.handleValidation((result as any).rows);
             return (result as any).rows as T[];
-          } else return result as T[];
+          } else {
+            await this.handleValidation(result);
+            return result as T[];
+          }
         }
       }
     } else {
@@ -136,8 +268,12 @@ export default abstract class QueryDefinition {
         if (typeof queryExecutor[functionName] === 'function') {
           const result = await queryExecutor[functionName]!(this.toSQL(), this.getParams());
           if ((result as any)?.rows) {
+            await this.handleValidation((result as any).rows);
             return (result as any).rows as T[];
-          } else return result as T[];
+          } else {
+            await this.handleValidation(result);
+            return result as T[];
+          }
         }
       }
     }
