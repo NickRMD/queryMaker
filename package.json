@@ -16,6 +16,9 @@
     "start": "node dist/index.js",
     "build:prod": "tsup --config tsup.config.ts",
     "publish:prod": "npm run build:prod && npm publish --access public",
+    "publish:rc": "npm run build && npm publish --tag rc --access public",
+    "publish:beta": "npm run build && npm publish --tag beta --access public",
+    "publish:alpha": "npm run build && npm publish --tag alpha --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [
