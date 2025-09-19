@@ -22,6 +22,10 @@ export default class InsertQuery extends QueryDefinition {
   /** Optional Common Table Expressions (CTEs) for the query. */
   private ctes: CteMaker | null = null;
 
+  /**
+    * Creates an instance of InsertQuery.
+    * @param table - The name of the table into which records will be inserted.
+    */
   constructor(table?: string) {
     super();
     this.table = table || '';
@@ -30,6 +34,8 @@ export default class InsertQuery extends QueryDefinition {
   /**
     * Adds Common Table Expressions (CTEs) to the query.
     * Accepts a CteMaker instance, a single Cte, or an array of Ctes.
+    * @param ctes - The CTEs to be added to the query.
+    * @returns The current InsertQuery instance for method chaining.
     */
   public with(ctes: CteMaker | Cte | Cte[]): this {
     if (ctes instanceof CteMaker) {
@@ -42,7 +48,11 @@ export default class InsertQuery extends QueryDefinition {
     return this;
   }
 
-  /** Specifies the table into which records will be inserted. */
+  /** 
+    * Specifies the table into which records will be inserted.
+    * @param table - The name of the table.
+    * @returns The current InsertQuery instance for method chaining.
+    */
   public into(table: string): this {
     this.table = table;
     return this;
@@ -51,15 +61,21 @@ export default class InsertQuery extends QueryDefinition {
   /**
     * Specifies the column-value pairs to be inserted.
     * Accepts either an array of ColumnValue objects or an object mapping column names to values.
+    * @param columnValues - The column-value pairs to be inserted.
+    * @returns The current InsertQuery instance for method chaining.
     */
   public values(columnValues: ColumnValue[] | { [column: string]: any }): this {
     if (Array.isArray(columnValues)) {
-      this.columnValues = columnValues;
+      this.columnValues = columnValues
+        .filter(v => v.value !== undefined)
+        .map(v => ({ ...v, value: v.value ?? null }));
     } else {
-      this.columnValues = Object.entries(columnValues).map(([column, value]) => ({
-        column,
-        value
-      }));
+      this.columnValues = Object.entries(columnValues)
+        .filter(([, value]) => value !== undefined)
+        .map(([column, value]) => ({
+          column,
+          value: value ?? null
+        }));
     }
     return this;
   }
@@ -67,13 +83,19 @@ export default class InsertQuery extends QueryDefinition {
   /**
     * Specifies a SELECT query to insert data from.
     * This allows inserting records based on the results of another query.
+    * @param query - The SELECT query to insert data from.
+    * @returns The current InsertQuery instance for method chaining.
     */
   public fromSelect(query: SelectQuery): this {
     this.selectQuery = query;
     return this;
   }
 
-  /** Specifies the fields to be returned after the insert operation. */
+  /** 
+    * Specifies the fields to be returned after the insert operation.
+    * @param fields - A single field or an array of fields to be returned.
+    * @returns The current InsertQuery instance for method chaining.
+    */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
       this.returningFields = fields;
@@ -83,7 +105,10 @@ export default class InsertQuery extends QueryDefinition {
     return this;
   }
 
-  /** Creates a deep clone of the current InsertQuery instance. */
+  /** 
+    * Creates a deep clone of the current InsertQuery instance.
+    * @returns A new InsertQuery instance with the same properties as the original.
+    */
   public clone(): QueryDefinition {
     const cloned = new InsertQuery(this.table);
     cloned.columnValues = JSON.parse(JSON.stringify(this.columnValues));
@@ -95,6 +120,7 @@ export default class InsertQuery extends QueryDefinition {
 
   /**
     * This an INSERT query.
+    * @returns The kind of SQL operation, which is 'INSERT' for this class.
     */
   public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
     return 'INSERT';
@@ -102,17 +128,24 @@ export default class InsertQuery extends QueryDefinition {
 
   /**
     * Indicates whether the query has been built and is ready for execution.
+    * @returns True if the query has been built; otherwise, false.
     */
   public get isDone(): boolean {
     return this.builtQuery !== null;
   }
 
-  /** Provides access to the current InsertQuery instance. */
+  /** 
+    * Provides access to the current InsertQuery instance.
+    * @returns The current InsertQuery instance.
+    */
   public get query(): QueryDefinition {
     return this;
   }
 
-  /** Invalidates the current state of the query, forcing a rebuild on the next operation. */
+  /** 
+    * Invalidates the current state of the query, forcing a rebuild on the next operation.
+    * @returns void
+    */
   public invalidate(): void {
     this.builtQuery = null;
     this.selectQuery?.invalidate();
@@ -123,7 +156,10 @@ export default class InsertQuery extends QueryDefinition {
     }
   }
 
-  /** Resets the query to its initial state. */
+  /** 
+    * Resets the query to its initial state.
+    * @returns void
+    */
   public reset(): void {
     this.table = '';
     this.columnValues = [];
@@ -133,14 +169,30 @@ export default class InsertQuery extends QueryDefinition {
     this.ctes = null;
   }
 
-  /** Retrieves the parameters associated with the query. */
+  /** 
+    * Retrieves the parameters associated with the query.
+    * @returns An array of parameters for the query.
+    */
   public getParams(): any[] {
-    return this.build().values;
+    if (!this.builtQuery) this.build();
+    let params: any[] = [];
+    if (this.columnValues.length > 0) {
+      params = this.columnValues.map(cv => cv.value);
+    } else if (this.selectQuery) {
+      params = this.selectQuery.getParams();
+    }
+    if (this.ctes) {
+      params = [...this.ctes.build().values, ...params];
+    }
+    return params;
   }
 
   /** 
     * Builds the SQL INSERT query and returns an object containing the query text and its parameters.
     * The optional deepAnalysis parameter can be used to control the depth of analysis during the build process.
+    * @param deepAnalysis - Whether to perform deep analysis during the build process.
+    * @returns An object containing the query text and its parameters.
+    * @throws Error if no table is specified or if neither values nor a SELECT query is provided.
     */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (!this.table) {
@@ -195,7 +247,10 @@ export default class InsertQuery extends QueryDefinition {
     return { text, values: analyzed.values };
   }
 
-
+  /** 
+    * Converts the built SQL query to a string.
+    * @returns The SQL query string.
+    */
   public toSQL(): string {
     return this.build().text;
   }

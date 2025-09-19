@@ -2,6 +2,8 @@
 /**
   * This function extracts parameter names from a function definition.
   * Useful for comparing function signatures.
+  * @param func - The function from which to extract parameter names.
+  * @returns An array of parameter names.
   */
 function getFunctionParameters(func: Function) {
     const funcStr = func.toString();
@@ -16,6 +18,9 @@ function getFunctionParameters(func: Function) {
 
 /**
   * Compares the parameters of two functions to see if they match.
+  * @param fn1 - The first function to compare.
+  * @param fn2 - The second function to compare.
+  * @returns True if the functions have the same parameters, false otherwise.
   */
 function compareParameters(fn1: Function, fn2: Function): boolean {
     const params1 = getFunctionParameters(fn1);
@@ -27,6 +32,9 @@ function compareParameters(fn1: Function, fn2: Function): boolean {
 /**
   * Deeply compares two values for equality.
   * Handles primitives, arrays, objects, and functions (by comparing their string representations and parameters).
+  * @param a - The first value to compare.
+  * @param b - The second value to compare.
+  * @returns True if the values are deeply equal, false otherwise.
   */
 export default function deepEqual(a: any, b: any): boolean {
   if (a === b) return true;
