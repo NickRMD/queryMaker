@@ -20,6 +20,9 @@ This means that some features and optimizations may be specific to PostgreSQL, b
 - Compatible with multiple SQL database systems (focusing on PostgreSQL)
 - Open-source and customizable
 
+# How updates will be handled?
+Please refer to the [UPDATE-STRATEGY.md](./UPDATE-STRATEGY.md) file for detailed information on how updates will be managed.
+
 ## Powerful search conditions
 The `Query.statement` builder allows you to create complex search
 conditions using logical operators like AND and OR. You can chain multiple conditions together to form intricate queries.
@@ -36,7 +39,6 @@ QueryMaker is built with TypeScript, providing strong typing and autocompletion 
 - Create a pagination helper for easier data retrieval.
 - Make tests using Jest or another testing framework.
 - Add other query kinds like `CREATE TABLE`, `ALTER TABLE`, etc.
-- Quality of like improvements for multi-schema tenancy support.
 
 ## Installation
 You can install QueryMaker via npm:
