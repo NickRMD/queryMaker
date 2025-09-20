@@ -1,5 +1,5 @@
 import CteMaker, { Cte } from "../cteMaker.js";
-import SqlEscaper from "../sqlEscaper";
+import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import UsingTable from "../types/UsingTable.js";
 import QueryDefinition from "./query.js";

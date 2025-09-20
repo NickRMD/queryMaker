@@ -1,6 +1,6 @@
 import CteMaker, { Cte } from "../cteMaker.js";
-import SqlEscaper from "../sqlEscaper";
-import ColumnValue from "../types/ColumnValue";
+import SqlEscaper from "../sqlEscaper.js";
+import ColumnValue from "../types/ColumnValue.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 

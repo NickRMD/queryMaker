@@ -4,7 +4,7 @@ import InsertQuery from "./queryKinds/insert.js";
 import SelectQuery from "./queryKinds/select.js";
 import UpdateQuery from "./queryKinds/update.js";
 import Statement from "./statementMaker.js";
-import sqlFlavor from "./types/sqlFlavor";
+import sqlFlavor from "./types/sqlFlavor.js";
 
 /**
   * QueryMaker is a factory class that provides static methods to create instances of different query types.

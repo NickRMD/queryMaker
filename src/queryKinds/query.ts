@@ -1,11 +1,11 @@
 import { ValidatorOptions } from "class-validator";
 import deepEqual from "../deepEqual.js";
-import { getClassValidator, getZod } from "../getOptionalPackages";
+import { getClassValidator, getZod } from "../getOptionalPackages.js";
 // Import types only since they are used for type checking only
 // and zod is optional peer dependency
 import type z from "zod";
 import type { ZodObject } from "zod";
-import sqlFlavor from "../types/sqlFlavor";
+import sqlFlavor from "../types/sqlFlavor.js";
 
 /**
   * An array of function names that can be used to execute SQL queries.
