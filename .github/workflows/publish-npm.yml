@@ -57,10 +57,10 @@ jobs:
                 RUN_NUMBER=1
               else
                 LAST_RUN_NUMBER=$(echo $LAST_TAG | sed -E "s/.*\.${DATE}([0-9]+)$/\1/")
-                RUN_NUMBER=$((LAST_RUN_NUMBER+1))
+                RUN_NUMBER=$((10#$LAST_RUN_NUMBER + 1))
               fi
 
-              VERSION="${PACKAGE_VERSION}-${IDENTIFIER}.${DATE}$(printf "%02d" $RUN_NUMBER)"
+              VERSION="${PACKAGE_VERSION}-${IDENTIFIER}.${DATE}$(printf "%03d" $RUN_NUMBER)"
               ;;
             *)
               echo "Branch $BRANCH_NAME is not configured for publishing"
