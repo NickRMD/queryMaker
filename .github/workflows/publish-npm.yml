@@ -11,6 +11,7 @@ on:
 
 jobs:
   publish:
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -56,10 +57,10 @@ jobs:
                 RUN_NUMBER=1
               else
                 LAST_RUN_NUMBER=$(echo $LAST_TAG | sed -E "s/.*\.${DATE}([0-9]+)$/\1/")
-                RUN_NUMBER=$((LAST_RUN_NUMBER+1))
+                RUN_NUMBER=$((10#$LAST_RUN_NUMBER + 1))
               fi
 
-              VERSION="${PACKAGE_VERSION}-${IDENTIFIER}.${DATE}$(printf "%02d" $RUN_NUMBER)"
+              VERSION="${PACKAGE_VERSION}-${IDENTIFIER}.${DATE}$(printf "%03d" $RUN_NUMBER)"
               ;;
             *)
               echo "Branch $BRANCH_NAME is not configured for publishing"
@@ -67,6 +68,7 @@ jobs:
               ;;
           esac
 
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "npm_tag=$NPM_TAG" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
@@ -83,47 +85,67 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Get all commits since last tag
+        id: commits
+        run: |
+          LAST_TAG=${{ steps.version.outputs.last_tag }}
+          echo "Last tag: $LAST_TAG"
+          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" || echo "No new commits")
+          
+          # Use the new multiline output format
+          {
+            echo "commits<<EOF"
+            echo "$COMMITS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release (main branch only)
         if: github.ref == 'refs/heads/main'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: Release v${{ steps.version.outputs.version }}
+          tag: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
           body: |
             ## Changes
             
             This release includes all changes from the latest stable version.
-            
+
             ### Installation
             ```bash
             npm install sqm@latest
             ```
-            
+
             For full changelog, see the commit history.
+
+            ### Commits since last release
+            ${{ steps.commits.outputs.commits }}
+
+            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
 
       - name: Create Pre-release (rc, beta, dev branches)
         if: github.ref != 'refs/heads/main'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
+          tag: v${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
           body: |
             ## ${{ steps.version.outputs.branch }} Release
-            
+
             This is a pre-release version for testing purposes.
-            
+
             ### Installation
             ```bash
             npm install sqm@${{ steps.version.outputs.npm_tag }}
             ```
-            
+
             **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
+
+            ### Commits since last release
+            ${{ steps.commits.outputs.commits }}
+
+            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: true
 
@@ -138,29 +160,72 @@ jobs:
               sha: context.sha,
               per_page: 50
             });
+
+            console.log(`Starting to process commits for issue references...`);
             
             const issueNumbers = new Set();
-            
+           
+            // Look for issue references in commit messages, excluding merge commits
             commits.forEach(commit => {
               const message = commit.commit.message;
-              const matches = message.match(/#(\d+)/g);
-              if (matches) {
-                matches.forEach(match => {
-                  const issueNumber = parseInt(match.substring(1));
-                  issueNumbers.add(issueNumber);
-                });
+              
+              // Skip merge commits to avoid false positives
+              if (message.startsWith('Merge pull request') || message.startsWith('Merge branch')) {
+                return;
+              }
+              
+              const issuePattern = /#(\d+)/g;
+              let match;
+              while ((match = issuePattern.exec(message)) !== null) {
+                issueNumbers.add(match[1]);
               }
             });
             
+            console.log('Will process the following issue numbers:', Array.from(issueNumbers).join(', '));
+            // Comment on each referenced issue
             for (const issueNumber of issueNumbers) {
               try {
+                // First check if it's actually an issue (not a PR)
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                });
+                
+                // Skip if it's a pull request
+                if (issue.pull_request) {
+                  console.log(`Skipping #${issueNumber} - it's a pull request, not an issue`);
+                  continue;
+                }
+                
+                // Skip if issue is already closed
+                if (issue.state === 'closed') {
+                  console.log(`Skipping #${issueNumber} - issue is already closed`);
+                  continue;
+                }
+               
+                // Comment on the issue
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issueNumber,
                   body: `🎉 This issue has been resolved in version \`${{ steps.version.outputs.version }}\` which is now available on npm!\n\n\`\`\`bash\nnpm install sqm@latest\n\`\`\``
                 });
+                
+                console.log(`Successfully commented on issue #${issueNumber}`);
+
+                // Close the issue
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
+
+                console.log(`Successfully closed issue #${issueNumber}`);
+                
               } catch (error) {
-                console.log(`Could not comment on issue #${issueNumber}: ${error.message}`);
+                console.log(`Could not process issue #${issueNumber}: ${error.message}`);
               }
             }
+

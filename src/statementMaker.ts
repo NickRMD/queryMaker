@@ -1,4 +1,4 @@
-import SearchModule from "./searchModule";
+import SearchModule from "./searchModule.js";
 
 /**
   * Defines the statement kind for combining statements.

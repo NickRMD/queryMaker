@@ -1,5 +1,5 @@
 import { match, P } from "ts-pattern";
-import sqlFlavor from "./types/sqlFlavor";
+import sqlFlavor from "./types/sqlFlavor.js";
 
 /**
   * SqlEscaper provides static methods to escape SQL identifiers and values
