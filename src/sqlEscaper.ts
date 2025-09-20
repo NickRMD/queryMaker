@@ -1,10 +1,24 @@
 import { match, P } from "ts-pattern";
 import sqlFlavor from "./types/sqlFlavor";
 
+/**
+  * SqlEscaper provides static methods to escape SQL identifiers and values
+  * according to different SQL dialects (flavors). It includes methods to escape
+  * identifiers, table names, and to append schema names in queries.
+  */
 export default class SqlEscaper {
 
+  /** Regex to identify schema placeholders like $schema, $schema1, $schema2, etc. */
   private static schemaRegex = /^\$schema\d*$/;
 
+  /**
+    * Escapes a given string value by wrapping it with the specified escape character
+    * and replacing occurrences of the escape character within the value.
+    * @param value - The string value to be escaped.
+    * @param escapeChar - The character used to escape the value (default is double quote `"`).
+    * @param escapeCharReplacement - The string to replace occurrences of the escape character (default is two double quotes `""`).
+    * @returns The escaped string value.
+    */
   public static escape(
     value: string,
     escapeChar: string = "\"",
@@ -13,6 +27,14 @@ export default class SqlEscaper {
     return `${escapeChar}${value.replace(new RegExp(escapeChar, "g"), escapeCharReplacement)}${escapeChar}`;
   }
 
+  /**
+    * Replaces schema placeholders in the query with actual schema names from the provided array.
+    * Placeholders are in the format $schema, $schema1, $schema2, etc.
+    * @param query - The SQL query string containing schema placeholders.
+    * @param schemas - An array of schema names to replace the placeholders.
+    * @returns The SQL query string with schema names appended.
+    * @throws Error if a placeholder index is out of bounds for the provided schemas array.
+    */
   public static appendSchemas(
     query: string,
     schemas: string[] = []
@@ -37,6 +59,11 @@ export default class SqlEscaper {
     * Will escape an identifier for use in a SQL statement.
     * The identifier will be escaped according to the specified SQL flavor.
     * It will return a string of the escaped identifier.
+    * @param identifier - The identifier to be escaped.
+    * @param flavor - The SQL flavor to use for escaping (e.g., postgres, mysql, mssql, sqlite, oracle).
+    * @returns The escaped identifier string.
+    * @throws Error if the SQL flavor is unsupported.
+    * @remarks If the identifier matches the schema regex (e.g., $schema), it will be returned as is without escaping.
     */
   public static escapeIdentifier(
     identifier: string,
@@ -77,6 +104,10 @@ export default class SqlEscaper {
     * Will escape a list of identifiers for use in a SELECT statement.
     * The identifiers will be escaped according to the specified SQL flavor.
     * It will return a string array (string[]) of the escaped identifiers.
+    * @param identifiers - The list of identifiers to be escaped.
+    * @param flavor - The SQL flavor to use for escaping (e.g., postgres, mysql, mssql, sqlite, oracle).
+    * @returns An array of escaped identifier strings.
+    * @throws Error if an identifier with an AS clause is invalid.
     */
   public static escapeSelectIdentifiers(
     identifiers: string[],
@@ -111,6 +142,10 @@ export default class SqlEscaper {
     * The table name will be escaped according to the specified SQL flavor.
     * It will return a string of the escaped table name.
     * It supports $schema.table format.
+    * @param tableName - The table name to be escaped.
+    * @param flavor - The SQL flavor to use for escaping (e.g., postgres, mysql, mssql, sqlite, oracle).
+    * @returns The escaped table name string.
+    * @throws Error if the table name is invalid.
     */
   public static escapeTableName(
     tableName: string,
