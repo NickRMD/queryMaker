@@ -14,9 +14,11 @@ import QueryDefinition from "./query.js";
 export default class UpdateQuery extends QueryDefinition {
   /** The table to update. */
   private table: string;
+  /** Optional alias for the table. */
   private tableAlias: string | null = null;
   /** Optional USING clause table. */
   private usingTable: string | null = null;
+  /** Optional alias for the USING table. */
   private usingAlias: string | null = null;
 
   /** JOIN clauses for the update. */
@@ -281,7 +283,8 @@ export default class UpdateQuery extends QueryDefinition {
             parametersToAdd.push(...stmt.values);
             return stmt.statement;
           })();
-      joinClauses += `${joinClauses ? '\n' : ''}${join.type} JOIN ${join.table} ${join.alias}\n ON ${onClause}`;
+      joinClauses += 
+        `${joinClauses ? '\n' : ''}${join.type.toUpperCase()} JOIN ${join.table} ${join.alias}\n ON ${onClause}`;
     }
 
     this.whereStatement.addParams(parametersToAdd);
