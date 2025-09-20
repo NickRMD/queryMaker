@@ -38,34 +38,39 @@ jobs:
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          
+          DATE=$(date +'%Y%m%d')
+
           case $BRANCH_NAME in
             "main")
               NPM_TAG="latest"
               VERSION=$PACKAGE_VERSION
               ;;
-            "rc")
-              NPM_TAG="rc"
-              VERSION="${PACKAGE_VERSION}-rc.${GITHUB_RUN_NUMBER}"
-              ;;
-            "beta")
-              NPM_TAG="beta"
-              VERSION="${PACKAGE_VERSION}-beta.${GITHUB_RUN_NUMBER}"
-              ;;
-            "dev")
-              NPM_TAG="dev"
-              VERSION="${PACKAGE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+            "rc"|"beta"|"dev")
+              IDENTIFIER=$BRANCH_NAME
+              NPM_TAG=$BRANCH_NAME
+
+              # Find the latest tag matching this package + identifier + date
+              LAST_TAG=$(git tag --list "v${PACKAGE_VERSION}-${IDENTIFIER}.${DATE}*" | sort -V | tail -n1)
+
+              if [ -z "$LAST_TAG" ]; then
+                RUN_NUMBER=1
+              else
+                LAST_RUN_NUMBER=$(echo $LAST_TAG | sed -E "s/.*\.${DATE}([0-9]+)$/\1/")
+                RUN_NUMBER=$((LAST_RUN_NUMBER+1))
+              fi
+
+              VERSION="${PACKAGE_VERSION}-${IDENTIFIER}.${DATE}$(printf "%02d" $RUN_NUMBER)"
               ;;
             *)
               echo "Branch $BRANCH_NAME is not configured for publishing"
               exit 1
               ;;
           esac
-          
+
           echo "npm_tag=$NPM_TAG" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          
+
           echo "Publishing version $VERSION with tag $NPM_TAG from branch $BRANCH_NAME"
 
       - name: Update package version
