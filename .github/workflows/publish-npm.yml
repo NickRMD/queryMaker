@@ -1,0 +1,161 @@
+name: Publish to NPM
+
+on:
+  push:
+    branches:
+      - main
+      - rc
+      - beta
+      - dev
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build:prod
+
+      - name: Determine version and tag
+        id: version
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          
+          case $BRANCH_NAME in
+            "main")
+              NPM_TAG="latest"
+              VERSION=$PACKAGE_VERSION
+              ;;
+            "rc")
+              NPM_TAG="rc"
+              VERSION="${PACKAGE_VERSION}-rc.${GITHUB_RUN_NUMBER}"
+              ;;
+            "beta")
+              NPM_TAG="beta"
+              VERSION="${PACKAGE_VERSION}-beta.${GITHUB_RUN_NUMBER}"
+              ;;
+            "dev")
+              NPM_TAG="dev"
+              VERSION="${PACKAGE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+              ;;
+            *)
+              echo "Branch $BRANCH_NAME is not configured for publishing"
+              exit 1
+              ;;
+          esac
+          
+          echo "npm_tag=$NPM_TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          echo "Publishing version $VERSION with tag $NPM_TAG from branch $BRANCH_NAME"
+
+      - name: Update package version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Publish to NPM
+        run: |
+          npm publish --tag ${{ steps.version.outputs.npm_tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release (main branch only)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## Changes
+            
+            This release includes all changes from the latest stable version.
+            
+            ### Installation
+            ```bash
+            npm install sqm@latest
+            ```
+            
+            For full changelog, see the commit history.
+          draft: false
+          prerelease: false
+
+      - name: Create Pre-release (rc, beta, dev branches)
+        if: github.ref != 'refs/heads/main'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
+          body: |
+            ## ${{ steps.version.outputs.branch }} Release
+            
+            This is a pre-release version for testing purposes.
+            
+            ### Installation
+            ```bash
+            npm install sqm@${{ steps.version.outputs.npm_tag }}
+            ```
+            
+            **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
+          draft: false
+          prerelease: true
+
+      - name: Comment on related issues (main branch only)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              per_page: 50
+            });
+            
+            const issueNumbers = new Set();
+            
+            commits.forEach(commit => {
+              const message = commit.commit.message;
+              const matches = message.match(/#(\d+)/g);
+              if (matches) {
+                matches.forEach(match => {
+                  const issueNumber = parseInt(match.substring(1));
+                  issueNumbers.add(issueNumber);
+                });
+              }
+            });
+            
+            for (const issueNumber of issueNumbers) {
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: `🎉 This issue has been resolved in version \`${{ steps.version.outputs.version }}\` which is now available on npm!\n\n\`\`\`bash\nnpm install sqm@latest\n\`\`\``
+                });
+              } catch (error) {
+                console.log(`Could not comment on issue #${issueNumber}: ${error.message}`);
+              }
+            }

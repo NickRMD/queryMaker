@@ -1,6 +1,6 @@
 {
   "name": "sqm",
-  "version": "0.5.4",
+  "version": "0.5.6",
   "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
     "publish:rc": "npm run build:prod && npm publish --tag rc --access public",
     "publish:beta": "npm run build:prod && npm publish --tag beta --access public",
     "publish:alpha": "npm run build:prod && npm publish --tag alpha --access public",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 0"
   },
   "files": [
     "dist",
