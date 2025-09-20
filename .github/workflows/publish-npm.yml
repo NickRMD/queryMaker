@@ -138,10 +138,11 @@ jobs:
               sha: context.sha,
               per_page: 50
             });
+
+            console.log(`Starting to process commits for issue references...`);
             
             const issueNumbers = new Set();
            
-            // Testing
             // Look for issue references in commit messages, excluding merge commits
             commits.forEach(commit => {
               const message = commit.commit.message;
@@ -151,26 +152,14 @@ jobs:
                 return;
               }
               
-              // Look for common issue reference patterns
-              const patterns = [
-                /(?:fix|fixes|fixed|close|closes|closed|resolve|resolves|resolved)\s+#(\d+)/gi,
-                /(?:ref|refs|references?)\s+#(\d+)/gi
-              ];
-              
-              patterns.forEach(pattern => {
-                const matches = message.match(pattern);
-                if (matches) {
-                  matches.forEach(match => {
-                    const issueMatch = match.match(/#(\d+)/);
-                    if (issueMatch) {
-                      const issueNumber = parseInt(issueMatch[1]);
-                      issueNumbers.add(issueNumber);
-                    }
-                  });
-                }
-              });
+              const issuePattern = /#(\d+)/g;
+              let match;
+              while ((match = issuePattern.exec(message)) !== null) {
+                issueNumbers.add(match[1]);
+              }
             });
             
+            console.log('Will process the following issue numbers:', Array.from(issueNumbers).join(', '));
             // Comment on each referenced issue
             for (const issueNumber of issueNumbers) {
               try {
