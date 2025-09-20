@@ -128,7 +128,7 @@ jobs:
           prerelease: true
 
       - name: Comment on related issues (main branch only)
-        if: github.ref == 'refs/heads/main'
+        # if: github.ref == 'refs/heads/main'
         uses: actions/github-script@v7
         with:
           script: |
