@@ -143,6 +143,7 @@ jobs:
             
             const issueNumbers = new Set();
            
+
             // Look for issue references in commit messages, excluding merge commits
             commits.forEach(commit => {
               const message = commit.commit.message;
