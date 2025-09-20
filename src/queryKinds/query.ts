@@ -73,7 +73,9 @@ export default abstract class QueryDefinition<S = any> {
     * The optional deepAnalysis parameter can be used to control the depth of analysis during the build process.
     */
   public abstract build(deepAnalysis?: boolean): {
+    /** The SQL query text. */
     text: string;
+    /** The parameters for the SQL query. */
     values: any[];
   };
 
@@ -109,7 +111,22 @@ export default abstract class QueryDefinition<S = any> {
     */
   protected flavor: sqlFlavor = sqlFlavor.postgres;
 
+  /**
+    * Schemas to be used in the query.
+    * This is useful for databases that support multiple schemas.
+    * NOTICE: SQL Injection is not checked in schema names. Be sure to use only trusted schema names.
+    */
   protected schemas: string[] = [];
+
+  /**
+    * Sets the SQL flavor for escaping identifiers.
+    * @param flavor The SQL flavor to set.
+    * @returns The current QueryDefinition instance for chaining.
+    */
+  public sqlFlavor(flavor: sqlFlavor) {
+    this.flavor = flavor;
+    return this;
+  }
 
   /**
     * Set schemas to be used in the query.
@@ -163,7 +180,7 @@ export default abstract class QueryDefinition<S = any> {
     */
   private classValidatorOptions: ValidatorOptions = {
     whitelist: true,
-    forbidNonWhitelisted: true,
+    forbidNonWhitelisted: false,
     validationError: { target: false }
   };
 

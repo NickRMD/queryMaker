@@ -17,6 +17,7 @@ class Query {
   /**
     * Creates an instance of QueryMaker.
     * @param deepAnalysisDefault - Optional boolean to set the default deep analysis behavior for query building.
+    * @param flavor - Optional SQL flavor to tailor the query syntax (default is 'postgres').
     */
   constructor(
     private readonly deepAnalysisDefault: boolean = false,

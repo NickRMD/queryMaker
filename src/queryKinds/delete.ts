@@ -13,6 +13,7 @@ import QueryDefinition from "./query.js";
 export default class DeleteQuery extends QueryDefinition {
   /** The table from which records will be deleted. */
   private deletingFrom: string;
+  /** An optional alias for the table being deleted from. */
   private deletingFromAlias: string | null = null;
 
   /** Tables to be used in the USING clause. */

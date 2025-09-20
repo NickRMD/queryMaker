@@ -2,7 +2,7 @@ import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
-import OrderBy from "../types/OrderBy.js";
+import OrderBy, { isOrderByField } from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 
 /**
@@ -284,15 +284,25 @@ export default class SelectQuery extends QueryDefinition {
   ): this {
     if (Array.isArray(orderBy)) {
       this.orderBys.push(
-        ...orderBy.map(ob => ({
-          ...ob,
-          field: SqlEscaper.escapeSelectIdentifiers([ob.field], this.flavor)[0]!
-        }))
+        ...orderBy.map(ob => {
+          let field = '';
+          if(isOrderByField(ob)) field = ob.field;
+          else field = ob.column;
+
+          return {
+            ...ob,
+            field: SqlEscaper.escapeSelectIdentifiers([field], this.flavor)[0]!
+          }
+        })
       );
     } else {
+      let field = '';
+      if(isOrderByField(orderBy)) field = orderBy.field;
+      else field = orderBy.column;
+
       this.orderBys.push({
         ...orderBy,
-        field: SqlEscaper.escapeSelectIdentifiers([orderBy.field], this.flavor)[0]!
+        field: SqlEscaper.escapeSelectIdentifiers([field], this.flavor)[0]!
       });
     }
     return this;
@@ -622,7 +632,8 @@ export default class SelectQuery extends QueryDefinition {
             parametersToAdd.push(...stmt.values);
             return stmt.statement;
           })();
-      joinClauses += `${joinClauses ? '\n' : ''}${join.type} JOIN ${join.table} ${join.alias}\n ON ${onClause}`;
+      joinClauses += 
+        `${joinClauses ? '\n' : ''}${join.type.toUpperCase()} JOIN ${join.table} ${join.alias}\n ON ${onClause}`;
     }
 
     this.whereStatement.addParams(parametersToAdd);
@@ -653,7 +664,13 @@ export default class SelectQuery extends QueryDefinition {
 
     let orderByClause = '';
     if (this.orderBys.length > 0) {
-      const orders = this.orderBys.map(ob => `${ob.field} ${ob.direction}`);
+      const orders = this.orderBys.map(ob => {
+        let field = '';
+        if(isOrderByField(ob)) field = ob.field;
+        else field = ob.column;
+
+        return `${field} ${ob.direction}`;
+      });
       orderByClause = `ORDER BY ${orders.join(', ')}`;
     }
 
