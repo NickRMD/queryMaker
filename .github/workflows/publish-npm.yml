@@ -68,6 +68,7 @@ jobs:
               ;;
           esac
 
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "npm_tag=$NPM_TAG" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
@@ -84,49 +85,61 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Get all commits since last tag
+        id: commits
+        run: |
+          LAST_TAG=${{ steps.version.outputs.last_tag }}
+          echo "Last tag: $LAST_TAG"
+          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" || echo "No new commits")
+          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release (main branch only)
         if: github.ref == 'refs/heads/main'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: Release v${{ steps.version.outputs.version }}
+          tag: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
           body: |
             ## Changes
             
             This release includes all changes from the latest stable version.
-            
+
             ### Installation
             ```bash
             npm install sqm@latest
             ```
-            
+
             For full changelog, see the commit history.
+
+            ### Commits since last release
+            ${{ steps.commits.outputs.commits }}
           draft: false
           prerelease: false
+          generate_release_notes: true
 
       - name: Create Pre-release (rc, beta, dev branches)
         if: github.ref != 'refs/heads/main'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
+          tag: v${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
           body: |
             ## ${{ steps.version.outputs.branch }} Release
-            
+
             This is a pre-release version for testing purposes.
-            
+
             ### Installation
             ```bash
             npm install sqm@${{ steps.version.outputs.npm_tag }}
             ```
-            
+
             **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
+
+            ### Commits since last release
+            ${{ steps.commits.outputs.commits }}
           draft: false
           prerelease: true
+          generate_release_notes: true
 
       - name: Comment on related issues (main branch only)
         if: github.ref == 'refs/heads/main'
