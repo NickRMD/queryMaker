@@ -120,7 +120,7 @@ jobs:
             ### Commits since last release
             ${{ steps.commits.outputs.commits }}
 
-            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/v${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
+            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
 
@@ -145,7 +145,7 @@ jobs:
             ### Commits since last release
             ${{ steps.commits.outputs.commits }}
 
-            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/v${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
+            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: true
 
