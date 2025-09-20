@@ -1,5 +1,5 @@
-import Query from "./queryMaker";
-import Statement, { StatementKind } from "./statementMaker";
+import Query from "./queryMaker.js";
+import Statement, { StatementKind } from "./statementMaker.js";
 
 
 /**

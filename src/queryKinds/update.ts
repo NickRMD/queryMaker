@@ -1,8 +1,8 @@
 import CteMaker, { Cte } from "../cteMaker.js";
-import SqlEscaper from "../sqlEscaper";
+import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
-import SetValue from "../types/SetValue";
+import SetValue from "../types/SetValue.js";
 import QueryDefinition from "./query.js";
 
 /**
