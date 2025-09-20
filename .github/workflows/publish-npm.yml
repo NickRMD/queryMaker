@@ -85,20 +85,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Get all commits since last tag
-        id: commits
-        run: |
-          LAST_TAG=${{ steps.version.outputs.last_tag }}
-          echo "Last tag: $LAST_TAG"
-          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" || echo "No new commits")
-          
-          # Use the new multiline output format
-          {
-            echo "commits<<EOF"
-            echo "$COMMITS"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release (main branch only)
         if: github.ref == 'refs/heads/main'
         uses: ncipollo/release-action@v1
@@ -116,13 +102,9 @@ jobs:
             ```
 
             For full changelog, see the commit history.
-
-            ### Commits since last release
-            ${{ steps.commits.outputs.commits }}
-
-            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
+          generateReleaseNotes: true
 
       - name: Create Pre-release (rc, beta, dev branches)
         if: github.ref != 'refs/heads/main'
@@ -141,13 +123,9 @@ jobs:
             ```
 
             **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
-
-            ### Commits since last release
-            ${{ steps.commits.outputs.commits }}
-
-            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: true
+          generateReleaseNotes: true
 
       - name: Comment on related issues (main branch only)
         if: github.ref == 'refs/heads/main'
