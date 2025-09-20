@@ -141,26 +141,68 @@ jobs:
             
             const issueNumbers = new Set();
             
+            // Look for issue references in commit messages, excluding merge commits
             commits.forEach(commit => {
               const message = commit.commit.message;
-              const matches = message.match(/#(\d+)/g);
-              if (matches) {
-                matches.forEach(match => {
-                  const issueNumber = parseInt(match.substring(1));
-                  issueNumbers.add(issueNumber);
-                });
+              
+              // Skip merge commits to avoid false positives
+              if (message.startsWith('Merge pull request') || message.startsWith('Merge branch')) {
+                return;
               }
+              
+              // Look for common issue reference patterns
+              const patterns = [
+                /(?:fix|fixes|fixed|close|closes|closed|resolve|resolves|resolved)\s+#(\d+)/gi,
+                /(?:ref|refs|references?)\s+#(\d+)/gi
+              ];
+              
+              patterns.forEach(pattern => {
+                const matches = message.match(pattern);
+                if (matches) {
+                  matches.forEach(match => {
+                    const issueMatch = match.match(/#(\d+)/);
+                    if (issueMatch) {
+                      const issueNumber = parseInt(issueMatch[1]);
+                      issueNumbers.add(issueNumber);
+                    }
+                  });
+                }
+              });
             });
             
+            // Comment on each referenced issue
             for (const issueNumber of issueNumbers) {
               try {
+                // First check if it's actually an issue (not a PR)
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber
+                });
+                
+                // Skip if it's a pull request
+                if (issue.pull_request) {
+                  console.log(`Skipping #${issueNumber} - it's a pull request, not an issue`);
+                  continue;
+                }
+                
+                // Skip if issue is already closed
+                if (issue.state === 'closed') {
+                  console.log(`Skipping #${issueNumber} - issue is already closed`);
+                  continue;
+                }
+                
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issueNumber,
                   body: `🎉 This issue has been resolved in version \`${{ steps.version.outputs.version }}\` which is now available on npm!\n\n\`\`\`bash\nnpm install sqm@latest\n\`\`\``
                 });
+                
+                console.log(`Successfully commented on issue #${issueNumber}`);
+                
               } catch (error) {
-                console.log(`Could not comment on issue #${issueNumber}: ${error.message}`);
+                console.log(`Could not process issue #${issueNumber}: ${error.message}`);
               }
             }
+
