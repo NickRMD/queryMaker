@@ -119,9 +119,10 @@ jobs:
 
             ### Commits since last release
             ${{ steps.commits.outputs.commits }}
+
+            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/v${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
 
       - name: Create Pre-release (rc, beta, dev branches)
         if: github.ref != 'refs/heads/main'
@@ -143,9 +144,10 @@ jobs:
 
             ### Commits since last release
             ${{ steps.commits.outputs.commits }}
+
+            **Full changelog**: https://github.com/NickRMD/queryMaker/compare/v${{ steps.version.outputs.last_tag }}...v${{ steps.version.outputs.version }}
           draft: false
           prerelease: true
-          generate_release_notes: true
 
       - name: Comment on related issues (main branch only)
         if: github.ref == 'refs/heads/main'
