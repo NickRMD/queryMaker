@@ -99,6 +99,7 @@ export default class Statement {
       for (const key of this.subscribeKeys) {
         this.unsubscribeSignals.push(
           (this as any)[key].subscribe(() => {
+            this.invalidate();
             try {
               this.build();
             } catch {}
