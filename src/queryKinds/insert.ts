@@ -250,8 +250,9 @@ export default class InsertQuery extends QueryDefinition {
       [...cteValues, ...this.getParams()],
       deepAnalysis
     );
+
     this.builtQuery = analyzed.text;
-    return { text, values: analyzed.values };
+    return { text: this.builtQuery, values: analyzed.values };
   }
 
   /** 

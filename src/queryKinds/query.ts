@@ -264,7 +264,8 @@ export default abstract class QueryDefinition<S = any> {
     noManager: boolean = false
   ): Promise<T[]> {
     if (typeof queryExecutor === 'function') {
-      const result = await queryExecutor(this.toSQL(), this.getParams());
+      const builtQuery = this.build();
+      const result = await queryExecutor(builtQuery.text, builtQuery.values);
       if ((result as any)?.rows) {
         await this.handleValidation((result as any).rows);
         return (result as any).rows as T[];
@@ -277,7 +278,8 @@ export default abstract class QueryDefinition<S = any> {
     if (!noManager && queryExecutor?.manager && typeof queryExecutor?.manager === 'object') {
       for (const functionName of functionNames) {
         if (typeof queryExecutor.manager[functionName] === 'function') {
-          const result = await queryExecutor.manager[functionName]!(this.toSQL(), this.getParams());
+          const builtQuery = this.build();
+          const result = await queryExecutor.manager[functionName]!(builtQuery.text, builtQuery.values);
           if ((result as any)?.rows) {
             await this.handleValidation((result as any).rows);
             return (result as any).rows as T[];
@@ -290,7 +292,8 @@ export default abstract class QueryDefinition<S = any> {
     } else {
       for (const functionName of functionNames) {
         if (typeof queryExecutor[functionName] === 'function') {
-          const result = await queryExecutor[functionName]!(this.toSQL(), this.getParams());
+          const builtQuery = this.build();
+          const result = await queryExecutor[functionName]!(builtQuery.text, builtQuery.values);
           if ((result as any)?.rows) {
             await this.handleValidation((result as any).rows);
             return (result as any).rows as T[];
