@@ -4,6 +4,7 @@ export default defineConfig({
   entry: ['src/index.ts'],
   target: ['esnext', 'node21'],
   format: ['cjs', 'esm'],
+  ignoreWatch: ['**/*.test.ts', '**/*.spec.ts'],
   dts: true,
   outDir: 'dist',
   clean: true,
