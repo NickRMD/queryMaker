@@ -1,4 +1,5 @@
 import CteMaker, { Cte } from "../cteMaker.js";
+import Signal from "../signal.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
@@ -506,13 +507,16 @@ export default class SelectQuery extends QueryDefinition {
         `$${paramIndex++}`
       ));
     }
-    const text = resultTexts.join('\nUNION ALL\n'); 
+    const text = resultTexts.join('\nUNION ALL\n');
+
+    const statement = new Statement();
+    (new Statement() as any as { values: Signal<any[]> }).values = new Signal<any[]>(values)
 
     const unionQuery = new SelectQuery();
     unionQuery.builtQuery = text;
     unionQuery.ctes = null;
     unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = null;
+    unionQuery.whereStatement = statement;
     unionQuery.table = '';
     unionQuery.tableAlias = null;
     unionQuery.distinctSelect = false;
@@ -563,11 +567,14 @@ export default class SelectQuery extends QueryDefinition {
     }
     const text = resultTexts.join('\nUNION\n'); 
 
+    const statement = new Statement();
+    (new Statement() as any as { values: Signal<any[]> }).values = new Signal<any[]>(values)
+
     const unionQuery = new SelectQuery();
     unionQuery.builtQuery = text;
     unionQuery.ctes = null;
     unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = null;
+    unionQuery.whereStatement = statement;
     unionQuery.table = '';
     unionQuery.tableAlias = null;
     unionQuery.distinctSelect = false;
