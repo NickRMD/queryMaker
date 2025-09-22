@@ -109,7 +109,6 @@ jobs:
       - name: Create Pre-release (rc, beta, dev branches)
         if: github.ref != 'refs/heads/main'
         uses: ncipollo/release-action@v1
-        commit: ${{steps.version.outputs.branch}}
         with:
           tag: v${{ steps.version.outputs.version }}
           name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
