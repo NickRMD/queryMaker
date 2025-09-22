@@ -1,6 +1,6 @@
 {
   "name": "sqm",
-  "version": "0.5.10",
+  "version": "0.5.11",
   "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,6 +15,7 @@
     "build": "tsup --config tsup.config.ts --format esm",
     "start": "node dist/index.js",
     "build:prod": "tsup --config tsup.config.ts",
+    "watch": "tsup --config tsup.config.ts --watch",
     "publish:prod": "npm run build:prod && npm publish --access public",
     "publish:rc": "npm run build:prod && npm publish --tag rc --access public",
     "publish:beta": "npm run build:prod && npm publish --tag beta --access public",
