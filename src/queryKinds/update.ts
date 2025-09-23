@@ -25,14 +25,8 @@ export default class UpdateQuery extends QueryDefinition {
   private joins: Join[] = [];
   /** SET values for the update. */
   private setValues: SetValue[] = [];
-  /** WHERE clause statement. */
-  private whereStatement: Statement | null = null;
   /** RETURNING fields. */
   private returningFields: string[] = [];
-  /** The final built SQL query string. */
-  private builtQuery: string | null = null;
-  /** Optional Common Table Expressions (CTEs) for the query. */
-  private ctes: CteMaker | null = null;
 
   /**
     * Creates an instance of UpdateQuery.
@@ -41,7 +35,7 @@ export default class UpdateQuery extends QueryDefinition {
     */
   constructor(table?: string, alias?: string) {
     super();
-    this.table = SqlEscaper.escapeTableName(table || '', this.flavor);
+    this.table = table ? SqlEscaper.escapeTableName(table, this.flavor) : '';
     this.tableAlias = alias || null;
   }
 
@@ -113,7 +107,7 @@ export default class UpdateQuery extends QueryDefinition {
     * @param values - The SET value(s) to be added.
     * @returns The current UpdateQuery instance for method chaining.
     */
-  public set(values: SetValue | SetValue[]): this {
+  public set(values: SetValue | SetValue[] | { [key: string]: any }): this {
     if (Array.isArray(values)) {
       this.setValues = values
         .filter(v => v.value !== undefined)
@@ -122,12 +116,17 @@ export default class UpdateQuery extends QueryDefinition {
           from: v.from ? SqlEscaper.escapeTableName(v.from, this.flavor) : undefined as any,
           value: v.value ?? null 
         }));
-    } else if (values.value !== undefined) {
+    } else if (values?.setColumn && (values?.from || values?.value !== undefined)) {
       this.setValues = [{
         setColumn: values.setColumn ? SqlEscaper.escapeTableName(values.setColumn, this.flavor) : '',
         from: values.from ? SqlEscaper.escapeTableName(values.from, this.flavor) : undefined as any,
         value: values.value ?? null
       }];
+    } else if (typeof values === 'object' && !Array.isArray(values)) {
+      this.setValues = Object.entries(values).map(([key, val]) => ({
+        setColumn: SqlEscaper.escapeTableName(key, this.flavor),
+        value: val
+      }));
     }
     return this;
   }
@@ -198,9 +197,24 @@ export default class UpdateQuery extends QueryDefinition {
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
+      this.returningFields = SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
     } else {
-      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
+      this.returningFields = SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
+    }
+    return this;
+  }
+
+  /**
+    * Adds additional RETURNING fields to the update.
+    * Accepts either a single field name or an array of field names.
+    * @param field - The field(s) to be added to the RETURNING clause.
+    * @returns The current UpdateQuery instance for method chaining.
+    */
+  public addReturning(field: string | string[]): this {
+    if (Array.isArray(field)) {
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers(field, this.flavor));
+    } else {
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers([field], this.flavor));
     }
     return this;
   }
@@ -223,6 +237,7 @@ export default class UpdateQuery extends QueryDefinition {
     }
 
     this.whereStatement = this.whereStatement || new Statement();
+    this.whereStatement?.setOffset(1);
 
     let ctesClause = '';
     let cteValues: any[] = [];
@@ -270,13 +285,13 @@ export default class UpdateQuery extends QueryDefinition {
     }
 
     let joinClauses = '';
-    let currentOffset = 0;
+    let currentOffset = setValues.length;
     let parametersToAdd: any = [];
     for (const join of this.joins) {
       const onClause = 
         typeof join.on === 'string' ? join.on
         : (() => {
-            join.on.enableWhere();
+            join.on.disableWhere();
             join.on.addOffset(currentOffset);
             const stmt = join.on.build(false);
             currentOffset += stmt.values.length;
@@ -315,9 +330,11 @@ export default class UpdateQuery extends QueryDefinition {
     );
 
     const allValues = [...cteValues, ...setValues, ...values];
+
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(this.builtQuery, allValues, deepAnalysis);
     this.builtQuery = analyzed.text;
-    return { text: this.builtQuery, values: analyzed.values };
+    this.builtParams = analyzed.values;
+    return { text: this.builtQuery, values: this.builtParams };
   }
 
   /**
@@ -326,7 +343,9 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns The SQL query string.
     */
   public toSQL(): string {
-    return this.build().text;
+    if (!this.builtQuery) this.build();
+    if (!this.builtQuery) throw new Error('Failed to build the SQL query.');
+    return this.builtQuery;
   }
 
   /**
@@ -355,21 +374,6 @@ export default class UpdateQuery extends QueryDefinition {
   }
 
   /**
-    * Invalidates the current state of the query definition, forcing a rebuild on the next operation.
-    * It also invalidates any associated WHERE statements and CTE queries.
-    * @returns void
-    */
-  public invalidate(): void {
-    this.builtQuery = null;
-    if (this.whereStatement) this.whereStatement.invalidate();
-    if (this.ctes) {
-      for (const cte of this.ctes['ctes']) {
-        cte['query'].invalidate();
-      }
-    }
-  }
-
-  /**
     * Resets the query definition to its initial state.
     * Clears all properties related to the query configuration.
     * @returns void
@@ -385,6 +389,7 @@ export default class UpdateQuery extends QueryDefinition {
     this.returningFields = [];
     this.builtQuery = null;
     this.ctes = null;
+    this.schemas = [];
   }
 
   /**
@@ -393,7 +398,9 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns An array of parameters for the query.
     */
   public getParams(): any[] {
-    return this.build().values;
+    if (!this.builtParams) this.build();
+    if (!this.builtParams) throw new Error('Failed to build the SQL query.');
+    return this.builtParams;
   }
 
   /**
@@ -402,7 +409,11 @@ export default class UpdateQuery extends QueryDefinition {
     * @returns A new UpdateQuery instance that is a clone of the current instance.
     */
   public clone(): UpdateQuery {
-    const cloned = new UpdateQuery(this.table, this.tableAlias || undefined);
+    const cloned = new UpdateQuery();
+    cloned.table = this.table;
+    cloned.tableAlias = this.tableAlias;
+    cloned.flavor = this.flavor;
+    cloned.schemas = [...this.schemas];
     cloned.usingTable = this.usingTable;
     cloned.usingAlias = this.usingAlias;
     cloned.joins = JSON.parse(JSON.stringify(this.joins));

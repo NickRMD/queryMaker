@@ -6,6 +6,8 @@ import { getClassValidator, getZod } from "../getOptionalPackages.js";
 import type z from "zod";
 import type { ZodObject } from "zod";
 import sqlFlavor from "../types/sqlFlavor.js";
+import CteMaker from "../cteMaker.js";
+import Statement from "../statementMaker.js";
 
 /**
   * An array of function names that can be used to execute SQL queries.
@@ -119,6 +121,39 @@ export default abstract class QueryDefinition<S = any> {
   protected schemas: string[] = [];
 
   /**
+    * The built SQL query string.
+    * Null if the query has not been built yet or has been invalidated.
+    */
+  protected builtQuery: string | null = null;
+
+  /**
+    * The parameters for the built SQL query.
+    * Null if the query has not been built yet or has been invalidated.
+    */
+  protected builtParams: any[] | null = null;
+
+  /** Optional Common Table Expressions (CTEs) for the query. */
+  protected ctes: CteMaker | null = null;
+
+  /** The WHERE clause statement. */
+  protected whereStatement: Statement | null = null;
+
+  /**
+    * Invalidates the current state of the query, forcing a rebuild on the next operation.
+    * @returns void
+    */
+  public invalidate(): void {
+    this.builtQuery = null;
+    this.builtParams = null;
+    if (this.whereStatement) this.whereStatement.invalidate();
+    if (this.ctes) {
+      for (const cte of this.ctes['ctes']) {
+        cte['query'].invalidate();
+      }
+    }
+  }
+
+  /**
     * Sets the SQL flavor for escaping identifiers.
     * @param flavor The SQL flavor to set.
     * @returns The current QueryDefinition instance for chaining.
@@ -153,11 +188,6 @@ export default abstract class QueryDefinition<S = any> {
   }
 
   /**
-    * Invalidates the current state of the query definition, forcing a rebuild on the next operation.
-    */
-  public abstract invalidate(): void;
-
-  /**
     * True if the schema to validate against is a Zod schema, false otherwise.
     */
   private isZodSchema: boolean = false;
@@ -190,7 +220,7 @@ export default abstract class QueryDefinition<S = any> {
     * @returns A promise that resolves if the schema is valid, or rejects with validation errors.
     * @throws An error if no validation library is available.
     */
-  public validate<T extends ZodObject | (new (...args: any[]) => any)>(
+  public validate<T extends { safeParse: any } | (new (...args: any[]) => any)>(
     schema: T
   ): QueryDefinition<SchemaType<T>> {
     if ((schema as any).safeParse) {
@@ -226,7 +256,7 @@ export default abstract class QueryDefinition<S = any> {
     if (this.validatorSchema) {
       if (this.isZodSchema) {
         const zod = await getZod();
-        await zod.array(this.validatorSchema).parseAsync(input);
+        return await zod.array(this.validatorSchema).parseAsync(input);
       } else if (this.isClassValidatorSchema) {
         const { classValidator, classTransformer } = await getClassValidator();
         const { validateOrReject } = classValidator;
@@ -235,8 +265,12 @@ export default abstract class QueryDefinition<S = any> {
           // Use class-validator to validate each item
           await validateOrReject(item as any, this.classValidatorOptions);
         }
+
+        return transformed;
       }
     }
+
+    return input;
   }
 
   /**
@@ -267,11 +301,9 @@ export default abstract class QueryDefinition<S = any> {
       const builtQuery = this.build();
       const result = await queryExecutor(builtQuery.text, builtQuery.values);
       if ((result as any)?.rows) {
-        await this.handleValidation((result as any).rows);
-        return (result as any).rows as T[];
+        return await this.handleValidation((result as any).rows);
       } else {
-        await this.handleValidation(result);
-        return result as T[];
+        return await this.handleValidation(result);
       }
     }
 
@@ -281,11 +313,9 @@ export default abstract class QueryDefinition<S = any> {
           const builtQuery = this.build();
           const result = await queryExecutor.manager[functionName]!(builtQuery.text, builtQuery.values);
           if ((result as any)?.rows) {
-            await this.handleValidation((result as any).rows);
-            return (result as any).rows as T[];
+            return await this.handleValidation((result as any).rows);
           } else {
-            await this.handleValidation(result);
-            return result as T[];
+            return await this.handleValidation(result);
           }
         }
       }
@@ -295,11 +325,9 @@ export default abstract class QueryDefinition<S = any> {
           const builtQuery = this.build();
           const result = await queryExecutor[functionName]!(builtQuery.text, builtQuery.values);
           if ((result as any)?.rows) {
-            await this.handleValidation((result as any).rows);
-            return (result as any).rows as T[];
+            return await this.handleValidation((result as any).rows);
           } else {
-            await this.handleValidation(result);
-            return result as T[];
+            return await this.handleValidation(result);
           }
         }
       }
