@@ -530,7 +530,7 @@ describe('StatementMaker Composites', () => {
 
 })
 
-describe('statementMaker-search', () => {
+describe('StatementMaker Search', () => {
   
   it('should handle fulltext search conditions', () => {
     const result = new StatementMaker()
