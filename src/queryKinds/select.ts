@@ -1,5 +1,4 @@
 import CteMaker, { Cte } from "../cteMaker.js";
-import Signal from "../signal.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
@@ -31,11 +30,6 @@ export default class SelectQuery extends QueryDefinition {
     * The fields to select.
     */
   private selectFields: string[];
-
-  /**
-    * The WHERE clause statement.
-    */
-  private whereStatement: Statement | null = null;
 
   /**
     * The HAVING clause statement.
@@ -73,16 +67,6 @@ export default class SelectQuery extends QueryDefinition {
   private groupBySelectFields: boolean = false;
 
   /**
-    * The built SQL query string.
-    */
-  private builtQuery: string | null = null;
-
-  /**
-    * The CTEs (Common Table Expressions) for the query.
-    */
-  private ctes: CteMaker | null = null;
-
-  /**
     * If true, disables deep analysis of the query for duplicate parameters.
     */
   private disabledAnalysis: boolean = false;
@@ -118,6 +102,15 @@ export default class SelectQuery extends QueryDefinition {
       this.whereStatement.invalidate();
     }
     return this;
+  }
+
+  /**
+    * Invalidates the current state of the query, forcing a rebuild on the next operation.
+    * @returns void
+    */
+  public override invalidate(): void {
+    super.invalidate();
+    if(this.havingStatement) this.havingStatement.invalidate();
   }
 
   /**
@@ -383,9 +376,11 @@ export default class SelectQuery extends QueryDefinition {
     this.groupBys = [];
     this.groupBySelectFields = false;
     this.builtQuery = null;
+    this.builtParams = null;
     this.ctes = null;
     this.havingStatement = null;
     this.disabledAnalysis = false;
+    this.schemas = [];
   }
 
   /**
@@ -396,9 +391,9 @@ export default class SelectQuery extends QueryDefinition {
     */
   public groupBy(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.groupBys.push(...fields);
+      this.groupBys.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
-      this.groupBys.push(fields);
+      this.groupBys.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
     }
     return this;
   }
@@ -435,22 +430,9 @@ export default class SelectQuery extends QueryDefinition {
     * @returns any[] The parameters for the built query.
     */
   public getParams(): any[] {
-    return this.build().values;
-  }
-
-  /**
-    * Invalidates the current built query, forcing a rebuild on the next operation.
-    * Also invalidates any nested statements or CTE queries.
-    * @returns void
-    */
-  public invalidate(): void {
-    this.builtQuery = null;
-    if (this.whereStatement) this.whereStatement.invalidate();
-    if (this.ctes) {
-      for (const cte of this.ctes['ctes']) {
-        cte['query'].invalidate();
-      }
-    }
+    if (!this.builtParams) this.build();
+    if (!this.builtParams) throw new Error("Failed to build query.");
+    return this.builtParams;  
   }
 
   /**
@@ -459,7 +441,12 @@ export default class SelectQuery extends QueryDefinition {
     * @returns A new SelectQuery instance that is a clone of the current instance.
     */
   public clone(): SelectQuery {
-    const cloned = new SelectQuery(this.table, this.tableAlias, this.groupBySelectFields);
+    const cloned = new SelectQuery();
+    cloned.table = this.table;
+    cloned.tableAlias = this.tableAlias;
+    this.groupBySelectFields = this.groupBySelectFields;
+    cloned.flavor = this.flavor;
+    cloned.schemas = [...this.schemas];
     cloned.distinctSelect = this.distinctSelect;
     cloned.selectFields = [...this.selectFields];
     cloned.whereStatement = this.whereStatement ? this.whereStatement.clone() : null;
@@ -509,14 +496,12 @@ export default class SelectQuery extends QueryDefinition {
     }
     const text = resultTexts.join('\nUNION ALL\n');
 
-    const statement = new Statement();
-    (new Statement() as any as { values: Signal<any[]> }).values = new Signal<any[]>(values)
-
     const unionQuery = new SelectQuery();
     unionQuery.builtQuery = text;
+    unionQuery.builtParams = values;
     unionQuery.ctes = null;
     unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = statement;
+    unionQuery.whereStatement = null;
     unionQuery.table = '';
     unionQuery.tableAlias = null;
     unionQuery.distinctSelect = false;
@@ -528,7 +513,10 @@ export default class SelectQuery extends QueryDefinition {
     unionQuery.groupBySelectFields = false;
     unionQuery.clone = () => {
       throw new Error("Cannot clone a UNION ALL query.");
-    }
+    };
+    unionQuery.invalidate = () => {
+      throw new Error("Cannot invalidate a UNION ALL query.");
+    };
     unionQuery.build = () => ({ text: text, values: values })
 
     return unionQuery;
@@ -567,14 +555,12 @@ export default class SelectQuery extends QueryDefinition {
     }
     const text = resultTexts.join('\nUNION\n'); 
 
-    const statement = new Statement();
-    (new Statement() as any as { values: Signal<any[]> }).values = new Signal<any[]>(values)
-
     const unionQuery = new SelectQuery();
     unionQuery.builtQuery = text;
+    unionQuery.builtParams = values;
     unionQuery.ctes = null;
     unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = statement;
+    unionQuery.whereStatement = null;
     unionQuery.table = '';
     unionQuery.tableAlias = null;
     unionQuery.distinctSelect = false;
@@ -586,7 +572,10 @@ export default class SelectQuery extends QueryDefinition {
     unionQuery.groupBySelectFields = false;
     unionQuery.clone = () => {
       throw new Error("Cannot clone a UNION query.");
-    }
+    };
+    unionQuery.invalidate = () => {
+      throw new Error("Cannot invalidate a UNION ALL query.");
+    };
     unionQuery.build = () => ({ text: text, values: values })
 
     return unionQuery;
@@ -717,7 +706,8 @@ export default class SelectQuery extends QueryDefinition {
         deepAnalysis
       );
       this.builtQuery = analyzed.text;
-      return { text: this.builtQuery, values: analyzed.values };
+      this.builtParams = analyzed.values;
+      return { text: this.builtQuery, values: this.builtParams };
     }
   }
 
@@ -727,7 +717,9 @@ export default class SelectQuery extends QueryDefinition {
     * @returns string The SQL query string.
     */
   public toSQL(): string {
-    return this.build().text;
+    if (!this.builtQuery) this.build();
+    if (!this.builtQuery) throw new Error("Failed to build query.");
+    return this.builtQuery;
   }
 
   /**

@@ -164,6 +164,17 @@ export default class Statement {
   }
 
   /**
+    * Sets the current index to a specific value.
+    * This is useful when you want to reset or set the starting point for parameter placeholders.
+    * @param offset - The value to set the current index to.
+    * @returns The current Statement instance for method chaining.
+    */
+  public setOffset(offset: number) {
+    this.index.value = offset;
+    return this;
+  }
+
+  /**
     * Enables the addition of the 'WHERE' keyword in the final SQL statement.
     * This is useful when the statement is a standalone WHERE clause.
     * @returns void
