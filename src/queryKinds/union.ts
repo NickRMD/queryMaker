@@ -4,10 +4,17 @@ import OrderBy from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
-type UnionTypeBase = 'UNION' | 'UNION ALL';
+/** Base types for UnionType */
+type UnionTypeBase = 'UNION' | 'UNION ALL' | 'INTERSECT' | 'INTERSECT ALL' | 'EXCEPT' | 'EXCEPT ALL';
 
+/**
+  * UnionType represents the type of SQL UNION operation.
+  */
 export type UnionType = Lowercase<UnionTypeBase> | UnionTypeBase;
 
+/**
+  * Type representing a SELECT query along with its associated union type.
+  */
 export type SelectQueryWithUnionType = {
   query: SelectQuery;
   type: UnionType;
