@@ -5,10 +5,20 @@ import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
 /** Allowed types for UnionType */
-const unionTypes = ['UNION', 'UNION ALL', 'INTERSECT', 'INTERSECT ALL', 'EXCEPT', 'EXCEPT ALL'] as const;
+export const UnionTypes = {
+  UNION: "UNION",
+  UNION_ALL: "UNION ALL",
+  INTERSECT: "INTERSECT",
+  INTERSECT_ALL: "INTERSECT ALL",
+  EXCEPT: "EXCEPT",
+  EXCEPT_ALL: "EXCEPT ALL",
+} as const;
+
+/** Array of allowed union types for validation */
+const unionTypesArray = Object.values(UnionTypes);
 
 /** Base types for UnionType */
-type UnionTypeBase = typeof unionTypes[number];
+type UnionTypeBase = typeof UnionTypes[keyof typeof UnionTypes];
 
 /**
   * UnionType represents the type of SQL UNION operation.
@@ -107,7 +117,7 @@ export default class Union extends QueryDefinition {
     */
   public add(query: SelectQuery, type: UnionType = 'UNION ALL'): Union {
     type = type.toUpperCase() as UnionTypeBase;
-    if (!unionTypes.includes(type))
+    if (!unionTypesArray.includes(type))
       throw new Error("Invalid union type. Only 'UNION' and 'UNION ALL' are allowed.");
 
     this.selectQueries.push({ query, type });
@@ -121,6 +131,19 @@ export default class Union extends QueryDefinition {
     */
   public addMany(queries: SelectQueryWithUnionType[]): Union {
     queries.forEach(({ query, type }) => {
+      this.add(query, type);
+    });
+    return this;
+  }
+
+  /**
+    * Adds multiple SELECT queries to the union of the same union type.
+    * @param queries An array of SelectQuery instances to add to the union.
+    * @param type The type of union operation ('UNION' or 'UNION ALL'). Defaults to 'UNION ALL'.
+    * @returns The current Union instance for method chaining.
+    */
+  public addManyOfType(queries: SelectQuery[], type: UnionType = 'UNION ALL'): Union {
+    queries.forEach((query) => {
       this.add(query, type);
     });
     return this;
