@@ -255,21 +255,15 @@ describe('Select Query', () => {
 
     const unionQuery = query1.union(query2).build();
 
-    expect(unionQuery.text).toBe('SELECT\n "id",\n "name"\nFROM "table1"\nWHERE (active = $1)\nUNION\nSELECT\n "id",\n "name"\nFROM "table2"\nWHERE (active = $2)');
-    expect(unionQuery.values).toEqual([true, true]);
+    expect(unionQuery.text).toBe('SELECT * FROM (\n (SELECT\n  "id",\n  "name"\n FROM "table1"\n WHERE (active = $1))\n\n UNION\n\n (SELECT\n  "id",\n  "name"\n FROM "table2"\n WHERE (active = $1))\n) AS union_subquery');
+    expect(unionQuery.values).toEqual([true]);
 
-    const query3 = new SelectQuery('table3')
-      .select(['id', 'name'])
-      .where('active = ?', true);
+    const unionAllQuery = query1.unionAll(query2).build();
 
-    const query4 = new SelectQuery('table4')
-      .select(['id', 'name'])
-      .where('active = ?', true);
+    expect(unionAllQuery.text).toBe('SELECT * FROM (\n (SELECT\n  "id",\n  "name"\n FROM "table1"\n WHERE (active = $1))\n\n UNION ALL\n\n (SELECT\n  "id",\n  "name"\n FROM "table2"\n WHERE (active = $1))\n) AS union_subquery');
+    expect(unionAllQuery.values).toEqual([true]);
 
-    const unionAllQuery = query3.unionAll(query4).build();
 
-    expect(unionAllQuery.text).toBe('SELECT\n "id",\n "name"\nFROM "table3"\nWHERE (active = $1)\nUNION ALL\nSELECT\n "id",\n "name"\nFROM "table4"\nWHERE (active = $2)');
-    expect(unionAllQuery.values).toEqual([true, true]);
   });
 
   it('should be able to reset its state', () => {

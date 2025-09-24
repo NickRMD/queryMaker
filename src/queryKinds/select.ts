@@ -5,6 +5,7 @@ import Join from "../types/Join.js";
 import QueryKind from "../types/QueryKind.js";
 import OrderBy, { isOrderByField } from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
+import Union from "./union.js";
 
 /**
   * SelectQuery class represents a SQL SELECT query.
@@ -470,121 +471,25 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
-    * Makes a UNION ALL of the current query with another SelectQuery.
-    * The resulting query will select all fields from both queries.
-    * Note: The resulting query cannot be cloned.
-    * @param query The SelectQuery to union with the current query.
-    * @returns A new SelectQuery instance representing the UNION ALL of the two queries.
+    * Combines the current SELECT query with another SELECT query using UNION ALL.
+    * @param query The SELECT query to combine with.
+    * @returns A new Union instance representing the combined queries.
     */
-  public unionAll(query: SelectQuery): SelectQuery {
-    let firstQuery;
-    try {
-      firstQuery = this.clone().build();
-    } catch(e) {
-      if (e instanceof Error && e.message.includes("UNION")) {
-        firstQuery = this.build();
-      } else throw e;
-    }
-
-    const secondQuery = query
-      .clone()
-      .build();
-
-    const texts = [firstQuery.text, secondQuery.text];
-    const values = [...firstQuery.values, ...secondQuery.values];
-
-    let paramIndex = 1;
-    let resultTexts: string[] = [];
-    for (const text of texts) {
-      resultTexts.push(text.replace(/\$(\d+)/g, () =>
-        `$${paramIndex++}`
-      ));
-    }
-    const text = resultTexts.join('\nUNION ALL\n');
-
-    const unionQuery = new SelectQuery();
-    unionQuery.builtQuery = text;
-    unionQuery.builtParams = values;
-    unionQuery.ctes = null;
-    unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = null;
-    unionQuery.table = '';
-    unionQuery.tableAlias = null;
-    unionQuery.distinctSelect = false;
-    unionQuery.joins = [];
-    unionQuery.orderBys = [];
-    unionQuery.limitCount = null;
-    unionQuery.offsetCount = null;
-    unionQuery.groupBys = [];
-    unionQuery.groupBySelectFields = false;
-    unionQuery.clone = () => {
-      throw new Error("Cannot clone a UNION ALL query.");
-    };
-    unionQuery.invalidate = () => {
-      throw new Error("Cannot invalidate a UNION ALL query.");
-    };
-    unionQuery.build = () => ({ text: text, values: values })
-
-    return unionQuery;
+  public unionAll(query: SelectQuery): Union {
+    return new Union()
+      .add(this)
+      .add(query, 'UNION ALL');
   }
 
   /**
-    * Makes a UNION of the current query with another SelectQuery.
-    * The resulting query will select all fields from both queries, removing duplicates.
-    * Note: The resulting query cannot be cloned.
-    * @param query The SelectQuery to union with the current query.
-    * @returns A new SelectQuery instance representing the UNION of the two queries.
+    * Combines the current SELECT query with another SELECT query using UNION.
+    * @param query The SELECT query to combine with.
+    * @returns A new Union instance representing the combined queries.
     */
-  public union(query: SelectQuery): SelectQuery {
-    let firstQuery;
-    try {
-      firstQuery = this.clone().build();
-    } catch(e) {
-      if (e instanceof Error && e.message.includes("UNION")) {
-        firstQuery = this.build();
-      } else throw e;
-    }
-
-    const secondQuery = query
-      .clone()
-      .build();
-
-    const texts = [firstQuery.text, secondQuery.text];
-    const values = [...firstQuery.values, ...secondQuery.values];
-
-    let paramIndex = 1;
-    let resultTexts: string[] = [];
-    for (const text of texts) {
-      resultTexts.push(text.replace(/\$(\d+)/g, () =>
-        `$${paramIndex++}`
-      ));
-    }
-    const text = resultTexts.join('\nUNION\n'); 
-
-    const unionQuery = new SelectQuery();
-    unionQuery.builtQuery = text;
-    unionQuery.builtParams = values;
-    unionQuery.ctes = null;
-    unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = null;
-    unionQuery.table = '';
-    unionQuery.tableAlias = null;
-    unionQuery.distinctSelect = false;
-    unionQuery.joins = [];
-    unionQuery.orderBys = [];
-    unionQuery.limitCount = null;
-    unionQuery.offsetCount = null;
-    unionQuery.groupBys = [];
-    unionQuery.groupBySelectFields = false;
-    unionQuery.clone = () => {
-      throw new Error("Cannot clone a UNION query.");
-    };
-    unionQuery.invalidate = () => {
-      throw new Error("Cannot invalidate a UNION ALL query.");
-    };
-    unionQuery.build = () => ({ text: text, values: values })
-
-    return unionQuery;
+  public union(query: SelectQuery): Union {
+    return new Union()
+      .add(this)
+      .add(query, 'UNION');
   }
 
   /**
