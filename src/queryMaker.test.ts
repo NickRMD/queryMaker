@@ -49,6 +49,35 @@ describe('Query Class', () => {
 
     expect(cteQuery.text).toBe('all_users AS (\nSELECT\n "*"\nFROM "users"\n)');
     expect(cteQuery.values).toEqual([]);
+
+
+    const selectQuery2 = Query.select
+      .from('orders', 'o')
+      .select(['o.id', 'o.total'])
+      .where('o.completed = ?', true)
+      .orderBy({ field: 'o.created_at', direction: 'DESC' })
+      .limit(15)
+      .offset(0);
+
+    const selectQuery3 = Query.select
+      .from('customers', 'c')
+      .select(['c.id', 'c.name'])
+      .where('c.active = ?', true)
+      .orderBy({ field: 'c.name', direction: 'ASC' })
+      .limit(10)
+      .offset(0);
+
+    const unionQuery = Query.union
+      .add(selectQuery2)
+      .add(selectQuery3, 'union all')
+      .orderBy({ field: 'id', direction: 'ASC' })
+      .as('union_subquery')
+      .limit(30)
+      .offset(0)
+      .build();
+
+    expect(unionQuery.text).toBe('SELECT * FROM (\n (SELECT\n  "o"."id",\n  "o"."total"\n FROM "orders" AS o\n WHERE (o.completed = $1)\n ORDER BY "o"."created_at" DESC\n LIMIT 15 OFFSET 0)\n\n UNION ALL\n\n (SELECT\n  "c"."id",\n  "c"."name"\n FROM "customers" AS c\n WHERE (c.active = $1)\n ORDER BY "c"."name" ASC\n LIMIT 10 OFFSET 0)\n) AS union_subquery\nORDER BY "id" ASC\nLIMIT 30\nOFFSET 0');
+    expect(unionQuery.values).toEqual([true]);
   });
 
   it('should be constructable', () => {
@@ -104,5 +133,34 @@ describe('Query Class', () => {
 
     expect(builtCte.text).toBe('all_products AS (\nSELECT\n "*"\nFROM "products"\n)');
     expect(builtCte.values).toEqual([]);
+
+    const selectQuery2 = query.select
+      .from('orders', 'o')
+      .select(['o.id', 'o.total'])
+      .where('o.completed = ?', true)
+      .orderBy({ field: 'o.created_at', direction: 'DESC' })
+      .limit(15)
+      .offset(0);
+
+    const selectQuery3 = query.select
+      .from('customers', 'c')
+      .select(['c.id', 'c.name'])
+      .where('c.active = ?', true)
+      .orderBy({ field: 'c.name', direction: 'ASC' })
+      .limit(10)
+      .offset(0);
+
+    const unionQuery = query.union
+      .add(selectQuery2)
+      .add(selectQuery3, 'union all')
+      .orderBy({ field: 'id', direction: 'ASC' })
+      .as('union_subquery')
+      .limit(30)
+      .offset(0);
+
+    const builtUnion = unionQuery.build();
+
+    expect(builtUnion.text).toBe('SELECT * FROM (\n (SELECT\n  "o"."id",\n  "o"."total"\n FROM "orders" AS o\n WHERE (o.completed = $1)\n ORDER BY "o"."created_at" DESC\n LIMIT 15 OFFSET 0)\n\n UNION ALL\n\n (SELECT\n  "c"."id",\n  "c"."name"\n FROM "customers" AS c\n WHERE (c.active = $1)\n ORDER BY "c"."name" ASC\n LIMIT 10 OFFSET 0)\n) AS union_subquery\nORDER BY "id" ASC\nLIMIT 30\nOFFSET 0');
+    expect(builtUnion.values).toEqual([true]);
   });
 });
