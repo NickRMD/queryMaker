@@ -185,6 +185,36 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
+    * Sets raw SQL fields to select from, without any escaping.
+    * Can accept a single field as a string or multiple fields as an array of strings.
+    * @param rawFields The raw SQL fields to select.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public rawSelect(rawFields: string | string[]): this {
+    if (Array.isArray(rawFields)) {
+      this.selectFields = [...rawFields];
+    } else {
+      this.selectFields = [rawFields];
+    }
+    return this;
+  }
+
+  /**
+    * Adds raw SQL fields to the existing selection, without any escaping.
+    * Can accept a single field as a string or multiple fields as an array of strings.
+    * @param rawFields The raw SQL fields to add to the selection.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public addRawSelect(rawFields: string | string[]): this {
+    if (Array.isArray(rawFields)) {
+      this.selectFields.push(...rawFields);
+    } else {
+      this.selectFields.push(rawFields);
+    }
+    return this;
+  }
+
+  /**
     * Adds fields to the existing selection.
     * Can accept a single field as a string or multiple fields as an array of strings.
     * @param fields The fields to add to the selection.
