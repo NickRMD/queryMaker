@@ -242,7 +242,21 @@ export default class InsertQuery extends QueryDefinition {
         const valuePlaceholders = this.columnValues.map((_, idx) => `$${idx + 1}`);
         insertClause += ` VALUES (${valuePlaceholders.join(', ')})`;
       }
-    } 
+    } else if (this.selectQuery) {
+      // Use columns from select query if not specified
+      const selectColumns = this.selectQuery.columns;
+      if (selectColumns.length > 0 && columns.length === 0) {
+        const parsedColumns = selectColumns.map(col => {
+          const regex = /^(?:(?:"?[\w$]+"?\.)?"?([\w$]+)"?(?:\s+AS\s+"?([\w$]+)"?)?)$/i;
+          const match = col.match(regex);
+          if (match) {
+            return SqlEscaper.escapeIdentifier(match[2]! || match[1]!, this.flavor);
+          }
+          return SqlEscaper.escapeIdentifier(col, this.flavor);
+        });
+        insertClause = `INSERT INTO ${this.table} (${parsedColumns.join(', ')})`;
+      }
+    }
 
     if (this.selectQuery) {
       const selectBuilt = this.selectQuery.build();
