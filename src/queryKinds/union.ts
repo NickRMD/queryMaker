@@ -78,11 +78,23 @@ export default class Union extends QueryDefinition {
     };
   }
 
+  /**
+    * Assigns an alias to the resulting union query.
+    * @param alias The alias to assign to the union query.
+    * @returns The current Union instance for method chaining.
+    */
   public as(alias: string): Union {
     this.unionAlias = alias;
     return this;
   }
 
+  /**
+    * Adds a SELECT query to the union with the specified union type.
+    * @param query The SelectQuery instance to add to the union.
+    * @param type The type of union operation ('UNION' or 'UNION ALL'). Defaults to 'UNION ALL'.
+    * @returns The current Union instance for method chaining.
+    * @throws Error if an invalid union type is provided.
+    */
   public add(query: SelectQuery, type: UnionType = 'UNION ALL'): Union {
     type = type.toUpperCase() as UnionType;
     if (type !== 'UNION' && type !== 'UNION ALL')
@@ -92,6 +104,11 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds multiple SELECT queries to the union.
+    * @param queries An array of objects containing SelectQuery instances and their corresponding union types.
+    * @returns The current Union instance for method chaining.
+    */
   public addMany(queries: SelectQueryWithUnionType[]): Union {
     queries.forEach(({ query, type }) => {
       this.add(query, type);
@@ -99,6 +116,12 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds a WHERE clause to the union query.
+    * @param statement The WHERE clause as a Statement instance or a raw SQL string.
+    * @param values Optional parameter values if a raw SQL string is provided.
+    * @returns The current Union instance for method chaining.
+    */
   public where(statement: Statement | string, ...values: any[]): Union {
     if (typeof statement === 'string') {
       statement = new Statement().raw('', statement, ...values);
@@ -107,6 +130,12 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds a WHERE clause to the union query using a callback function.
+    * The callback function receives a Statement instance to build the WHERE clause.
+    * @param statement A callback function that takes a Statement instance and returns a Statement or void.
+    * @returns The current Union instance for method chaining.
+    */
   public useStatement(statement: (stmt: Statement) => Statement | void): Union {
     const stmt = new Statement();
     const newStatement = statement(stmt) || stmt;
@@ -115,6 +144,12 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Sets a LIMIT on the number of rows returned by the union query.
+    * @param limit The maximum number of rows to return. Must be a non-negative integer.
+    * @returns The current Union instance for method chaining.
+    * @throws Error if the limit is negative or not an integer.
+    */
   public limit(limit: number): Union {
     if (limit < 0 || !Number.isInteger(limit)) {
       throw new Error('Limit must be a non-negative integer.');
@@ -123,6 +158,12 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Sets an OFFSET for the union query.
+    * @param offset The number of rows to skip before starting to return rows. Must be a non-negative integer.
+    * @returns The current Union instance for method chaining.
+    * @throws Error if the offset is negative or not an integer.
+    */
   public offset(offset: number): Union {
     if (offset < 0 || !Number.isInteger(offset)) {
       throw new Error('Offset must be a non-negative integer.');
@@ -131,10 +172,22 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Sets both LIMIT and OFFSET for the union query.
+    * @param limit The maximum number of rows to return. Must be a non-negative integer.
+    * @param offset The number of rows to skip before starting to return rows. Must be a non-negative integer.
+    * @returns The current Union instance for method chaining.
+    * @throws Error if the limit or offset is negative or not an integer.
+    */
   public limitAndOffset(limit: number, offset: number): Union {
     return this.limit(limit).offset(offset);
   }
 
+  /**
+    * Sets the ORDER BY clauses for the union query, replacing any existing clauses.
+    * @param orderBy A single OrderBy object or an array of OrderBy objects.
+    * @returns The current Union instance for method chaining.
+    */
   public orderBy(orderBy: OrderBy | OrderBy[]): Union {
     if (Array.isArray(orderBy)) {
       this.orderBys = orderBy
@@ -144,6 +197,11 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds ORDER BY clauses to the union query without replacing existing clauses.
+    * @param orderBy A single OrderBy object or an array of OrderBy objects to add.
+    * @returns The current Union instance for method chaining.
+    */
   public addOrderBy(orderBy: OrderBy | OrderBy[]): Union {
     if (Array.isArray(orderBy)) {
       this.orderBys.push(...orderBy)
@@ -153,6 +211,11 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Sets the GROUP BY clauses for the union query, replacing any existing clauses.
+    * @param field A single field name or an array of field names to group by.
+    * @returns The current Union instance for method chaining.
+    */
   public groupBy(field: string | string[]): Union {
     if (Array.isArray(field)) {
       this.groupBys = field
@@ -162,6 +225,11 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds GROUP BY clauses to the union query without replacing existing clauses.
+    * @param field A single field name or an array of field names to add to the GROUP BY clause.
+    * @returns The current Union instance for method chaining.
+    */
   public addGroupBy(field: string | string[]): Union {
     if (Array.isArray(field)) {
       this.groupBys.push(...field)
@@ -171,6 +239,12 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds a HAVING clause to the union query.
+    * @param statement The HAVING clause as a Statement instance or a raw SQL string.
+    * @param values Optional parameter values if a raw SQL string is provided.
+    * @returns The current Union instance for method chaining.
+    */
   public having(statement: Statement | string, ...values: any[]): Union {
     if (typeof statement === 'string') {
       statement = new Statement().raw('', statement, ...values);
@@ -179,6 +253,12 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds a HAVING clause to the union query using a callback function.
+    * The callback function receives a Statement instance to build the HAVING clause.
+    * @param statement A callback function that takes a Statement instance and returns a Statement or void.
+    * @returns The current Union instance for method chaining.
+    */
   public useHavingStatement(statement: (stmt: Statement) => Statement | void): Union {
     const stmt = new Statement();
     const newStatement = statement(stmt) || stmt;
@@ -187,6 +267,15 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Builds the final SQL query for the union operation.
+    * It combines all added SELECT queries with their respective union types,
+    * applies any WHERE, GROUP BY, HAVING, ORDER BY, LIMIT, and OFFSET clauses,
+    * and returns the complete SQL text along with the parameter values.
+    * @param deepAnalysis If true, performs a deep analysis to re-index parameters. Defaults to false.
+    * @returns An object containing the final SQL text and an array of parameter values.
+    * @throws Error if no SELECT queries have been added to the union.
+    */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (this.selectQueries.length === 0) {
       throw new Error('No SELECT queries added to the UNION.');
@@ -281,6 +370,12 @@ export default class Union extends QueryDefinition {
     };
   }
 
+  /**
+    * Generates the SQL string for the union query.
+    * If the query has not been built yet, it will build it first.
+    * @returns The SQL string of the union query.
+    * @throws Error if the query fails to build.
+    */
   public toSQL(): string {
     if(!this.builtQuery) this.build();
     if(!this.builtQuery) throw new Error("Failed to build the query.");
@@ -288,12 +383,24 @@ export default class Union extends QueryDefinition {
     
   }
 
+  /**
+    * Retrieves the parameter values for the union query.
+    * If the query has not been built yet, it will build it first.
+    * @returns An array of parameter values for the union query.
+    * @throws Error if the query fails to build.
+    */
   public getParams(): any[] {
     if(!this.builtParams) this.build();
     if(!this.builtParams) throw new Error("Failed to build the query.");
     return this.builtParams;
   }
 
+  /**
+    * Creates a deep clone of the current Union instance.
+    * This includes cloning all properties and nested objects to ensure
+    * that modifications to the clone do not affect the original instance.
+    * @returns A new Union instance that is a deep clone of the current instance.
+    */
   public clone(): Union {
     const newUnion = new Union();
     newUnion.unionAlias = this.unionAlias;
@@ -311,6 +418,13 @@ export default class Union extends QueryDefinition {
     return newUnion;
   }
 
+  /**
+    * Resets the internal state of the Union instance.
+    * This clears all properties, including the union alias, limit, offset,
+    * select queries, order by clauses, group by clauses, having statement,
+    * where statement, built query, built parameters, and schemas.
+    * After calling this method, the Union instance will be in its initial state.
+    */
   public reset(): void {
     this.unionAlias = null;
     this.limitCount = null;
@@ -325,6 +439,10 @@ export default class Union extends QueryDefinition {
     this.schemas = [];
   }
 
+  /**
+    * This is a UNION query.
+    * @returns The kind of SQL operation, which is 'UNION' for this class.
+    */
   public get kind() {
     return QueryKind.UNION;
   }
