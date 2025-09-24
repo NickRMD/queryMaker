@@ -8,6 +8,7 @@ import type { ZodObject } from "zod";
 import sqlFlavor from "../types/sqlFlavor.js";
 import CteMaker from "../cteMaker.js";
 import Statement from "../statementMaker.js";
+import QueryKind from "../types/QueryKind.js";
 
 /**
   * An array of function names that can be used to execute SQL queries.
@@ -92,20 +93,31 @@ export default abstract class QueryDefinition<S = any> {
   public abstract reset(): void;
 
   /**
-    * Indicates whether the query definition is complete and ready for execution.
+    * Indicates whether the query is complete and ready for execution.
+    * @returns True if the query has been built and has parameters, false otherwise.
     */
-  public abstract get isDone(): boolean;
+  public get isDone(): boolean {
+    return this.builtQuery !== null && this.builtParams !== null;
+  }
 
   /**
     * The kind of SQL operation represented by the query definition.
     * It can be one of 'INSERT', 'UPDATE', 'DELETE', or 'SELECT'.
     */
-  public abstract kind: 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT';
+  public abstract get kind(): QueryKind;
 
   /**
     * Provides access to the current query definition instance.
+    * @returns The current QueryDefinition instance.
     */
-  public abstract get query(): QueryDefinition;
+  public get query(): QueryDefinition {
+    return this;
+  }
+
+  protected spaceLines(str: string, spaces: number = 0): string {
+    const space = ' '.repeat(spaces);
+    return str.split('\n').map(line => space + line).join('\n');
+  }
 
   /**
     * The SQL flavor to use for escaping identifiers.

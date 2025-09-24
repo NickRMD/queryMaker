@@ -1,6 +1,7 @@
 import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import ColumnValue from "../types/ColumnValue.js";
+import QueryKind from "../types/QueryKind.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
@@ -150,24 +151,8 @@ export default class InsertQuery extends QueryDefinition {
     * This an INSERT query.
     * @returns The kind of SQL operation, which is 'INSERT' for this class.
     */
-  public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
-    return 'INSERT';
-  }
-
-  /**
-    * Indicates whether the query has been built and is ready for execution.
-    * @returns True if the query has been built; otherwise, false.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /** 
-    * Provides access to the current InsertQuery instance.
-    * @returns The current InsertQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
+  public get kind() {
+    return QueryKind.INSERT;
   }
 
   /** 

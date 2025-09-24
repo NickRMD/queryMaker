@@ -2,6 +2,7 @@ import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
+import QueryKind from "../types/QueryKind.js";
 import SetValue from "../types/SetValue.js";
 import QueryDefinition from "./query.js";
 
@@ -349,28 +350,11 @@ export default class UpdateQuery extends QueryDefinition {
   }
 
   /**
-    * Indicates whether the query has been built.
-    * Returns true if the builtQuery property is not null.
-    * @returns A boolean indicating if the query is built.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /**
     * This an UPDATE query.
     * @returns The string 'UPDATE'.
     */
-  public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
-    return 'UPDATE';
-  }
-
-  /**
-    * Provides access to the current query definition instance.
-    * @returns The current UpdateQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
+  public get kind() {
+    return QueryKind.UPDATE;
   }
 
   /**
