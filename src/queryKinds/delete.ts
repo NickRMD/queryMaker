@@ -218,6 +218,7 @@ export default class DeleteQuery extends QueryDefinition {
     }
 
     this.whereStatement = this.whereStatement || new Statement();
+    this.whereStatement.enableWhere();
 
     let ctesClause = '';
     if (this.ctes) {

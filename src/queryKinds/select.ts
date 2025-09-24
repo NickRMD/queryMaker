@@ -106,6 +106,19 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
+    * Resets the WHERE clause parameter offset to zero.
+    * This is useful when reusing the query in different contexts.
+    * @return The current SelectQuery instance for chaining.
+    */
+  public resetWhereOffset(): this {
+    if (this.whereStatement) {
+      this.whereStatement.setOffset(1);
+      this.whereStatement.invalidate();
+    }
+    return this;
+  }
+
+  /**
     * Invalidates the current state of the query, forcing a rebuild on the next operation.
     * @returns void
     */
@@ -614,7 +627,7 @@ export default class SelectQuery extends QueryDefinition {
       const onClause = 
         typeof join.on === 'string' ? join.on
         : (() => {
-            join.on.enableWhere();
+            join.on.disableWhere();
             join.on.addOffset(currentOffset);
             const stmt = join.on.build(false);
             currentOffset += stmt.values.length;
