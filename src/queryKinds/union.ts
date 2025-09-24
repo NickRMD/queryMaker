@@ -4,8 +4,11 @@ import OrderBy from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
+/** Allowed types for UnionType */
+const unionTypes = ['UNION', 'UNION ALL', 'INTERSECT', 'INTERSECT ALL', 'EXCEPT', 'EXCEPT ALL'] as const;
+
 /** Base types for UnionType */
-type UnionTypeBase = 'UNION' | 'UNION ALL' | 'INTERSECT' | 'INTERSECT ALL' | 'EXCEPT' | 'EXCEPT ALL';
+type UnionTypeBase = typeof unionTypes[number];
 
 /**
   * UnionType represents the type of SQL UNION operation.
@@ -103,8 +106,8 @@ export default class Union extends QueryDefinition {
     * @throws Error if an invalid union type is provided.
     */
   public add(query: SelectQuery, type: UnionType = 'UNION ALL'): Union {
-    type = type.toUpperCase() as UnionType;
-    if (type !== 'UNION' && type !== 'UNION ALL')
+    type = type.toUpperCase() as UnionTypeBase;
+    if (!unionTypes.includes(type))
       throw new Error("Invalid union type. Only 'UNION' and 'UNION ALL' are allowed.");
 
     this.selectQueries.push({ query, type });
