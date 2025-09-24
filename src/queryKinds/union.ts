@@ -1,4 +1,5 @@
 import Statement from "../statementMaker.js";
+import QueryKind from "../types/QueryKind.js";
 import OrderBy from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
@@ -155,7 +156,7 @@ export default class Union extends QueryDefinition {
     return this;
   }
 
-  public build(): { text: string; values: any[] } {
+  public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (this.selectQueries.length === 0) {
       throw new Error('No SELECT queries added to the UNION.');
     }
@@ -164,10 +165,13 @@ export default class Union extends QueryDefinition {
     const values: any[] = [];
 
     // Add offset on each select query to ensure correct parameter indexing
-    let paramOffset = 0;
-    for (const { query, type } of this.selectQueries) {
-      const builtQuery = query.addWhereOffset(paramOffset).build();
-      unionItself += (unionItself ? `\n${type}\n` : '') + `(${builtQuery.text})`;
+    let paramOffset = 1;
+    for (const { query, type: unionType } of this.selectQueries) {
+      (query as any).disabledAnalysis = true;
+      let builtQuery = query.addWhereOffset(paramOffset - 1).build();
+      builtQuery.text = this.spaceLines(`(${builtQuery.text})`, 1);
+      const type = this.spaceLines(unionType, 1);
+      unionItself += (unionItself ? `\n\n${type}\n\n` : '') + `${builtQuery.text}`;
       paramOffset += builtQuery.values.length;
       values.push(...builtQuery.values);
     }
@@ -218,8 +222,8 @@ export default class Union extends QueryDefinition {
     }
 
     const union = [
-      'SELECT * FROM',
-      `(${unionItself}) AS ${this.unionAlias}`,
+      'SELECT * FROM (',
+      `${unionItself}\n) AS ${this.unionAlias}`,
       whereClause,
       groupByClause,
       havingClause,
@@ -232,7 +236,8 @@ export default class Union extends QueryDefinition {
       
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
       union,
-      finalValues
+      finalValues,
+      deepAnalysis
     );
 
     this.builtQuery = analyzed.text;
@@ -242,7 +247,55 @@ export default class Union extends QueryDefinition {
       text: this.builtQuery,
       values: this.builtParams
     };
+  }
+
+  public toSQL(): string {
+    if(!this.builtQuery) this.build();
+    if(!this.builtQuery) throw new Error("Failed to build the query.");
+    return this.builtQuery;
     
   }
+
+  public getParams(): any[] {
+    if(!this.builtParams) this.build();
+    if(!this.builtParams) throw new Error("Failed to build the query.");
+    return this.builtParams;
+  }
+
+  public clone(): QueryDefinition {
+    const newUnion = new Union();
+    newUnion.unionAlias = this.unionAlias;
+    newUnion.limitCount = this.limitCount;
+    newUnion.offsetCount = this.offsetCount;
+    newUnion.schemas = [...this.schemas];
+    newUnion.selectQueries = this.selectQueries.map(sq => ({
+      query: sq.query.clone() as SelectQuery,
+      type: sq.type
+    }));
+    newUnion.orderBys = [...this.orderBys];
+    newUnion.groupBys = [...this.groupBys];
+    newUnion.havingStatement = this.havingStatement ? this.havingStatement.clone() : null;
+    newUnion.whereStatement = this.whereStatement ? this.whereStatement.clone() : null;
+    return newUnion;
+  }
+
+  public reset(): void {
+    this.unionAlias = null;
+    this.limitCount = null;
+    this.offsetCount = null;
+    this.selectQueries = [];
+    this.orderBys = [];
+    this.groupBys = [];
+    this.havingStatement = null;
+    this.whereStatement = null;
+    this.builtQuery = null;
+    this.builtParams = null;
+    this.schemas = [];
+  }
+
+  public get kind() {
+    return QueryKind.UNION;
+  }
+
 }
 
