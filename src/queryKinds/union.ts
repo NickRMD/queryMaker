@@ -43,8 +43,39 @@ export default class Union extends QueryDefinition {
   /** Having statement for the union query */
   private havingStatement: Statement | null = null;
 
-  public rawSelectQueries(): SelectQueryWithUnionType[] {
-    return [...this.selectQueries];
+  /**
+    * Make the union without selecting from it
+    * Useful when the raw union is needed as a subquery
+    * @returns An object containing the raw SQL text of the union and its parameter values.
+    */
+  public rawUnion(): { text: string; values: any[] } {
+    if (this.selectQueries.length === 0) {
+      throw new Error('No SELECT queries added to the UNION.');
+    }
+
+    let unionItself: string = '';
+    const values: any[] = [];
+
+    let paramOffset = 1;
+    for (const { query, type } of this.selectQueries) {
+      (query as any).disabledAnalysis = true;
+      query.resetWhereOffset();
+      let builtQuery = query.addWhereOffset(paramOffset - 1).build();
+      unionItself += (unionItself ? `\n\n${type}\n\n` : '') + `${builtQuery.text}`;
+      paramOffset += builtQuery.values.length;
+      values.push(...builtQuery.values);
+    }
+
+    const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
+      unionItself,
+      values,
+      false
+    );
+
+    return {
+      text: analyzed.text,
+      values: analyzed.values
+    };
   }
 
   public as(alias: string): Union {
@@ -168,6 +199,7 @@ export default class Union extends QueryDefinition {
     let paramOffset = 1;
     for (const { query, type: unionType } of this.selectQueries) {
       (query as any).disabledAnalysis = true;
+      query.resetWhereOffset();
       let builtQuery = query.addWhereOffset(paramOffset - 1).build();
       builtQuery.text = this.spaceLines(`(${builtQuery.text})`, 1);
       const type = this.spaceLines(unionType, 1);
@@ -232,8 +264,8 @@ export default class Union extends QueryDefinition {
       offsetClause
     ].filter(part => part.trim() !== '').join('\n');
 
-    const finalValues = [...values, ...whereValues, ...havingValues];
-      
+    const finalValues = [...values, ...whereValues, ...havingValues]; 
+
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
       union,
       finalValues,
@@ -262,7 +294,7 @@ export default class Union extends QueryDefinition {
     return this.builtParams;
   }
 
-  public clone(): QueryDefinition {
+  public clone(): Union {
     const newUnion = new Union();
     newUnion.unionAlias = this.unionAlias;
     newUnion.limitCount = this.limitCount;
