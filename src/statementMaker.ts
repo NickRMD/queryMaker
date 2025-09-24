@@ -1,4 +1,5 @@
 import SearchModule from "./searchModule.js";
+import Signal from "./signal.js";
 
 /**
   * Defines the statement kind for combining statements.
@@ -16,12 +17,14 @@ export default class Statement {
   /**
     * The current index for parameter placeholders.
     */
-  private index: number;
+  private index: Signal<number>;
   /**
     * Array to hold individual unparsed SQL statements.
     * These statements will be combined to form the final SQL clause.
+    * This is a reactive signal, so changes will trigger re-parsing
+    * or invalidation based on the constructor option.
     */
-  private statements: string[] = [];
+  private statements = Signal.create<string[]>([]);
   /**
     * The final parsed SQL statement with placeholders.
     * This is generated when the build method is called.
@@ -30,8 +33,10 @@ export default class Statement {
   /**
     * Array to hold the values corresponding to the placeholders in the SQL statement.
     * These values will be used in the parameterized query execution.
+    * This is a reactive signal, so changes will trigger re-parsing
+    * or invalidation based on the constructor option.
     */
-  private values: any[] = [];
+  private values = Signal.create<any[]>([]);
   /**
     * Flag to determine if the final statement should include the 'WHERE' keyword.
     * This is useful when the statement is part of a larger SQL query.
@@ -39,12 +44,100 @@ export default class Statement {
   private addWhere = true;
 
   /**
+    * Flag to indicate if the statement should be re-parsed on changes.
+    * This is useful for performance optimization, signals will handle reactivity.
+    * If false, the statement will only be parsed when build() is called.
+    * If true, it will re-parse on every change to statements or values.
+    */
+  private reparseOnChange: boolean;
+
+  /**
+    * Array of functions to unsubscribe from signals.
+    * This is used to remove listeners when reparseOnChange is toggled.
+    */
+  private unsubscribeSignals: (() => void)[] = [];
+
+  /**
     * Creates an instance of the Statement class.
     * @param initialOffset - An optional offset to start the parameter index from.
     * This is useful when combining multiple statements to ensure unique placeholders.
     */
-  constructor(initialOffset = 0) {
-    this.index = 1 + initialOffset;
+  constructor(initialOffset = 0, reparseOnChange = false) {
+    this.index = Signal.create(1 + initialOffset);
+    this.reparseOnChange = reparseOnChange;
+    this.subscribeToSignals();
+  }
+
+  /**
+    * Unsubscribes from all signal listeners.
+    * This is used when toggling the reparseOnChange flag to prevent memory leaks.
+    */
+  private unsubscribeAllSignals() {
+    this.unsubscribeSignals.forEach(unsub => unsub());
+    this.unsubscribeSignals = [];
+  }
+
+  /**
+    * Keys of the signals to subscribe to for changes.
+    * This is used to set up listeners for statements, values, and index changes.
+    */
+  private subscribeKeys = ['statements', 'values', 'index'];
+
+  /**
+    * Subscribes to changes in the statements and values signals.
+    * Depending on the reparseOnChange flag, it either invalidates the parsed statement
+    * or triggers a re-parse when changes occur.
+    */
+  private subscribeToSignals() {
+    if (!this.reparseOnChange) {
+      for (const key of this.subscribeKeys) {
+        this.unsubscribeSignals.push(
+          (this as any)[key].subscribe(() => this.invalidate())
+        );
+      }
+    } else {
+      for (const key of this.subscribeKeys) {
+        this.unsubscribeSignals.push(
+          (this as any)[key].subscribe(() => {
+            this.invalidate();
+            try {
+              this.build();
+            } catch {}
+          })
+        );
+      }
+    }
+  }
+
+  /**
+    * Enables re-parsing of the statement whenever there are changes to the statements or values.
+    * This is useful for scenarios where the statement needs to be kept up-to-date with changes.
+    * @returns The current Statement instance for method chaining.
+    */
+  public enableReparseOnChange(): this {
+    if (this.reparseOnChange) return this;
+
+    this.reparseOnChange = true;
+    this.unsubscribeAllSignals();
+    this.subscribeToSignals();
+
+    return this;
+  }
+
+  /**
+    * Disables re-parsing of the statement on changes to the statements or values.
+    * Instead, the statement will only be parsed when the build method is called.
+    * This is useful for performance optimization in scenarios where changes are frequent.
+    * @returns The current Statement instance for method chaining.
+    */
+  public disableReparseOnChange(): this {
+    if (!this.reparseOnChange) return this;
+
+    this.reparseOnChange = false;
+    this.unsubscribeAllSignals();
+    this.subscribeToSignals();
+
+    return this;
   }
 
   /**
@@ -54,8 +147,8 @@ export default class Statement {
     * @returns The current Statement instance for method chaining.
     */
   public addParams(params: any[]) {
-    this.values = [...params, ...this.values];
-    this.index += params.length;
+    this.values.value = [...params, ...this.values.value];
+    this.index.value += params.length;
     return this;
   }
 
@@ -66,7 +159,18 @@ export default class Statement {
     * @returns The current Statement instance for method chaining.
     */
   public addOffset(offset: number) {
-    this.index += offset;
+    this.index.value += offset;
+    return this;
+  }
+
+  /**
+    * Sets the current index to a specific value.
+    * This is useful when you want to reset or set the starting point for parameter placeholders.
+    * @param offset - The value to set the current index to.
+    * @returns The current Statement instance for method chaining.
+    */
+  public setOffset(offset: number) {
+    this.index.value = offset;
     return this;
   }
 
@@ -77,6 +181,7 @@ export default class Statement {
     */
   public enableWhere() {
     this.addWhere = true;
+    return this;
   }
 
   /**
@@ -86,6 +191,7 @@ export default class Statement {
     */
   public disableWhere() {
     this.addWhere = false;
+    return this;
   }
 
   /**
@@ -114,10 +220,10 @@ export default class Statement {
     * @returns void
     */
   public reset() {
-    this.statements = [];
+    this.statements.value = [];
     this.parsedStatement = null;
-    this.values = [];
-    this.index = 1;
+    this.values.value = [];
+    this.index.value = 1;
     this.addWhere = true;
   }
 
@@ -139,7 +245,7 @@ export default class Statement {
     if (statement instanceof Statement) {
       const raw = statement.returnRaw();
       statement = raw.statement;
-      values = raw.values;
+      values = raw.values.value;
     }
 
     values = Array.isArray(values) ? values : [values];
@@ -148,12 +254,12 @@ export default class Statement {
       throw new Error('Number of placeholders does not match number of values');
     }
 
-    if (this.statements.length === 0) {
-      this.statements.push(`(${statement})`);
+    if (this.statements.value.length === 0) {
+      this.statements.setValue((v) => v.push(`(${statement})`));
     } else {
-      this.statements.push(`${kind} (${statement})`);
+      this.statements.setValue((v) => v.push(`${kind} (${statement})`));
     }
-    this.values.push(...values); 
+    this.values.setValue((v) => v.push(...values));
   }
 
   /**
@@ -332,7 +438,7 @@ export default class Statement {
     * @param kind - The logical operator to combine this condition with previous ones ('AND' or 'OR').
     * @returns The current Statement instance for method chaining.
     */
-  public notILike(
+  public notIlike(
     column: string,
     pattern: string,
     kind: StatementKind = 'AND'
@@ -426,7 +532,7 @@ export default class Statement {
   ) {
     statements.forEach((stmt) => {
       const raw = stmt.returnRaw();
-      this.addStatement(raw.statement, raw.values, joinWith);
+      this.addStatement(raw.statement, raw.values.value, joinWith);
     });
 
     return this;
@@ -437,7 +543,7 @@ export default class Statement {
     * This prevents re-parsing and ensures that the final SQL is only generated once.
     * @returns True if the statements have been parsed, false otherwise.
     */
-  public hasParsed() {
+  public isDone() {
     return this.parsedStatement !== null;
   }
 
@@ -448,17 +554,17 @@ export default class Statement {
     * @returns The final parsed SQL statement as a string.
     */
   private parseStatements(newLine = true) {
-    if (this.hasParsed()) {
+    if (this.isDone()) {
       return this.parsedStatement as string;
     }
 
-    if (this.statements.length === 0) {
+    if (this.statements.value.length === 0) {
       this.parsedStatement = '';
       return this.parsedStatement;
     }
     let separator = newLine ? '\n ' : ' ';
-    let index = this.index;
-    let statement = this.statements.join(separator).replace(/\?/g, () => `$${index++}`);
+    let index = this.index.value;
+    let statement = this.statements.value.join(separator).replace(/\?/g, () => `$${index++}`);
     this.parsedStatement = this.addWhere ? `WHERE ${statement}` : statement;
     return this.parsedStatement;
   }
@@ -472,7 +578,7 @@ export default class Statement {
   public build(newLine = true) {
     return {
       statement: this.parseStatements(newLine),
-      values: this.values
+      values: this.values.value
     }
   }
 
@@ -482,7 +588,7 @@ export default class Statement {
     * @returns The array of values corresponding to the placeholders in the SQL statement.
     */
   public get params() {
-    return this.values;
+    return this.values.value;
   }
 
   /**
@@ -491,12 +597,13 @@ export default class Statement {
     * @returns A new Statement instance that is a clone of the current one.
     */
   public clone(): Statement {
-    const clone = new Statement(this.index - 1);
-    clone.statements = [...this.statements];
+    const clone = new Statement(this.index.value - 1, this.reparseOnChange);
+    clone.statements.value = [...this.statements.value];
     clone.parsedStatement = this.parsedStatement;
-    clone.values = [...this.values];
+    clone.values.value = [...this.values.value];
     clone.addWhere = this.addWhere;
-    clone.index = this.index;
+    clone.index.value = this.index.value;
+    clone.subscribeToSignals();
     return clone;
   }
 
@@ -506,7 +613,7 @@ export default class Statement {
     * @returns An object containing the raw SQL statement and the array of values.
     */
   private returnRaw() {
-    const statement = this.statements.join('\n ');
+    const statement = this.statements.value.join('\n ');
     return {
       statement: statement,
       values: this.values

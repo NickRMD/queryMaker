@@ -2,6 +2,7 @@ import { Cte } from "./cteMaker.js";
 import DeleteQuery from "./queryKinds/delete.js";
 import InsertQuery from "./queryKinds/insert.js";
 import SelectQuery from "./queryKinds/select.js";
+import Union from "./queryKinds/union.js";
 import UpdateQuery from "./queryKinds/update.js";
 import Statement from "./statementMaker.js";
 import sqlFlavor from "./types/sqlFlavor.js";
@@ -85,6 +86,15 @@ class Query {
     return new Cte();
   }
 
+  public get union(): Union {
+    const unionQuery = new Union();
+    (unionQuery as any).flavor = this.flavor;
+    unionQuery.build = (deepAnalysis: boolean = this.deepAnalysisDefault) => {
+      return Union.prototype.build.call(unionQuery, deepAnalysis);
+    }
+    return unionQuery;
+  }
+
   /**
     * Initiates a new SELECT query.
     * @returns A new SelectQuery instance.
@@ -133,6 +143,10 @@ class Query {
     */
   public static get cte(): Cte {
     return new Cte();
+  }
+
+  public static get union(): Union {
+    return new Union();
   }
 
 }

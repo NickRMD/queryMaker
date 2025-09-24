@@ -1,6 +1,7 @@
 import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
+import QueryKind from "../types/QueryKind.js";
 import UsingTable from "../types/UsingTable.js";
 import QueryDefinition from "./query.js";
 
@@ -15,17 +16,10 @@ export default class DeleteQuery extends QueryDefinition {
   private deletingFrom: string;
   /** An optional alias for the table being deleted from. */
   private deletingFromAlias: string | null = null;
-
   /** Tables to be used in the USING clause. */
   private usingTables: UsingTable[] = [];
-  /** The WHERE clause statement. */
-  private whereStatement: Statement | null = null;
   /** The fields to be returned after the delete operation. */
   private returningFields: string[] = [];
-  /** The final built SQL query string. */
-  private builtQuery: string | null = null;
-  /** Optional Common Table Expressions (CTEs) for the query. */
-  private ctes: CteMaker | null = null;
 
   /** 
     * Creates an instance of DeleteQuery.
@@ -34,7 +28,7 @@ export default class DeleteQuery extends QueryDefinition {
     */
   constructor(from?: string, alias: string | null = null) {
     super();
-    this.deletingFrom = SqlEscaper.escapeTableName(from || '', this.flavor);
+    this.deletingFrom = from ? SqlEscaper.escapeTableName(from, this.flavor) : '';
     this.deletingFromAlias = alias;
   }
 
@@ -134,6 +128,21 @@ export default class DeleteQuery extends QueryDefinition {
     */
   public returning(fields: string | string[]): this {
     if (Array.isArray(fields)) {
+      this.returningFields = SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
+    } else {
+      this.returningFields = SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
+    }
+    return this;
+  }
+
+  /** 
+    * Adds fields to the existing RETURNING clause.
+    * Accepts a string or an array of strings.
+    * @param fields - The field(s) to be returned.
+    * @returns The current DeleteQuery instance for method chaining.
+    */
+  public addReturning(fields: string | string[]): this {
+    if (Array.isArray(fields)) {
       this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
       this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
@@ -147,7 +156,10 @@ export default class DeleteQuery extends QueryDefinition {
     * @returns A new DeleteQuery instance with the same properties as the original.
     */
   public clone(): DeleteQuery {
-    const cloned = new DeleteQuery(this.deletingFrom, this.deletingFromAlias);
+    const cloned = new DeleteQuery();
+    cloned.schemas = [...this.schemas];
+    cloned.deletingFrom = this.deletingFrom;
+    cloned.deletingFromAlias = this.deletingFromAlias;
     cloned.usingTables = JSON.parse(JSON.stringify(this.usingTables));
     cloned.whereStatement = this.whereStatement ? this.whereStatement.clone() : null;
     cloned.returningFields = [...this.returningFields];
@@ -162,6 +174,7 @@ export default class DeleteQuery extends QueryDefinition {
     */
   public reset(): void {
     this.deletingFrom = '';
+    this.schemas = [];
     this.deletingFromAlias = null;
     this.usingTables = [];
     this.whereStatement = null;
@@ -171,27 +184,11 @@ export default class DeleteQuery extends QueryDefinition {
   }
 
   /**
-    * Indicates whether the query has been built and is ready for execution.
-    * @returns True if the query has been built; otherwise, false.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /**
     * This a DELETE query.
     * @returns The kind of SQL operation, which is 'DELETE' for this class.
     */
-  public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
-    return 'DELETE';
-  }
-
-  /**
-    * Provides access to the current DeleteQuery instance.
-    * @returns The current DeleteQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
+  public get kind() {
+    return QueryKind.DELETE;
   }
 
   /**
@@ -216,11 +213,12 @@ export default class DeleteQuery extends QueryDefinition {
     * @throws Error if no table is specified for the DELETE query.
     */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
-    if (!this.deletingFrom) {
+    if (!this.deletingFrom.trim()) {
       throw new Error('No table specified for DELETE query.');
     }
 
     this.whereStatement = this.whereStatement || new Statement();
+    this.whereStatement.enableWhere();
 
     let ctesClause = '';
     if (this.ctes) {
@@ -268,7 +266,8 @@ export default class DeleteQuery extends QueryDefinition {
 
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(this.builtQuery, values, deepAnalysis);
     this.builtQuery = analyzed.text;
-    return { text: this.builtQuery, values: analyzed.values };
+    this.builtParams = analyzed.values;
+    return { text: this.builtQuery, values: this.builtParams };
   }
 
   /**
@@ -277,7 +276,9 @@ export default class DeleteQuery extends QueryDefinition {
     * @returns The SQL DELETE query as a string.
     */
   public toSQL(): string {
-    return this.build().text;
+    if(!this.builtQuery) this.build();
+    if(!this.builtQuery) throw new Error('Failed to build query.');
+    return this.builtQuery;
   }
 
   /**
@@ -286,6 +287,8 @@ export default class DeleteQuery extends QueryDefinition {
     * @returns An array of parameters for the SQL DELETE query.
     */
   public getParams(): any[] {
-    return this.build().values;
+    if(!this.builtQuery) this.build();
+    if(!this.builtQuery) throw new Error('Failed to build query.');
+    return this.builtParams || [];
   }
 }
