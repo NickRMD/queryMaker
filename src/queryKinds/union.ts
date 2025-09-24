@@ -255,7 +255,7 @@ export default class Union extends QueryDefinition {
 
     const union = [
       'SELECT * FROM (',
-      `${unionItself}\n) AS ${this.unionAlias}`,
+      `${unionItself}\n) AS ${this.unionAlias || 'union_subquery'}`,
       whereClause,
       groupByClause,
       havingClause,
