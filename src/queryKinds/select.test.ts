@@ -17,6 +17,24 @@ describe('Select Query', () => {
     expect(query.values).toEqual([18]);
   });
 
+  // Raw in the sense of not escaped
+  it('should support selecting raw', () => {
+    const query = new SelectQuery('users', 'u')
+      .rawSelect('u.id')
+      .rawSelect(['u.id', 'COUNT(o.id) AS order_count'])
+      .addRawSelect('u.name')
+      .addRawSelect(['u.email', 'u.age'])
+      .where('u.age > ?', 18)
+      .groupBy(['u.id', 'u.name'])
+      .orderBy({ field: 'order_count', direction: 'DESC' })
+      .limit(10)
+      .offset(5)
+      .build();
+
+    expect(query.text).toBe('SELECT\n u.id,\n COUNT(o.id) AS order_count,\n u.name,\n u.email,\n u.age\nFROM "users" AS u\nWHERE (u.age > $1)\nGROUP BY "u"."id", "u"."name"\nORDER BY "order_count" DESC\nLIMIT 10 OFFSET 5');
+    expect(query.values).toEqual([18]);
+  })
+
   it('should handle joins correctly', () => {
     const query = new SelectQuery('orders', 'o')
       .select(['o.id', 'o.total', 'c.name'])
