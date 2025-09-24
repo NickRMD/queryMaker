@@ -2,6 +2,7 @@ import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
+import QueryKind from "../types/QueryKind.js";
 import OrderBy, { isOrderByField } from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 
@@ -409,19 +410,11 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
-    * Gets whether the query has been built.
-    * @returns boolean The built status of the query.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /**
     * This is a SELECT query.
     * @returns 'SELECT' The kind of query.
     */
-  public get kind(): 'SELECT' {
-    return 'SELECT';
+  public get kind() {
+    return QueryKind.SELECT;
   }
 
   /**
@@ -720,13 +713,5 @@ export default class SelectQuery extends QueryDefinition {
     if (!this.builtQuery) this.build();
     if (!this.builtQuery) throw new Error("Failed to build query.");
     return this.builtQuery;
-  }
-
-  /**
-    * Gets the query definition itself.
-    * @returns QueryDefinition The current SelectQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
   }
 }

@@ -1,6 +1,7 @@
 import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
+import QueryKind from "../types/QueryKind.js";
 import UsingTable from "../types/UsingTable.js";
 import QueryDefinition from "./query.js";
 
@@ -183,27 +184,11 @@ export default class DeleteQuery extends QueryDefinition {
   }
 
   /**
-    * Indicates whether the query has been built and is ready for execution.
-    * @returns True if the query has been built; otherwise, false.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /**
     * This a DELETE query.
     * @returns The kind of SQL operation, which is 'DELETE' for this class.
     */
-  public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
-    return 'DELETE';
-  }
-
-  /**
-    * Provides access to the current DeleteQuery instance.
-    * @returns The current DeleteQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
+  public get kind() {
+    return QueryKind.DELETE;
   }
 
   /**
