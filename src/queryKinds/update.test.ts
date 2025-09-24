@@ -38,6 +38,30 @@ describe('Update Query', () => {
     expect(query3.values).toEqual(['Jane', 25, 2]);
   });
 
+  it('should support useStatement', () => {
+    const query = new UpdateQuery('users', 'u')
+      .set({
+        setColumn: 'name', value: 'Jane'
+      })
+      .useStatement(stmt => stmt.and('age = ?', 25))
+      .build();
+
+    expect(query.text).toBe('UPDATE "users" u\nSET "name" = $1\nWHERE (age = $2)');
+    expect(query.values).toEqual(['Jane', 25]);
+
+    const query2 = new UpdateQuery('users', 'u')
+      .set({
+        setColumn: 'name', value: 'Jane'
+      })
+      .useStatement(stmt => {
+        stmt.and('age = ?', 25);
+      })
+      .build();
+
+    expect(query2.text).toBe('UPDATE "users" u\nSET "name" = $1\nWHERE (age = $2)');
+    expect(query2.values).toEqual(['Jane', 25]);
+  });
+
   it('should generate UPDATE SQL with RETURNING clause', () => {
     const query = new UpdateQuery('users')
       .set({ name: 'Alice', age: 28 })
