@@ -57,6 +57,51 @@ describe("Union Query", () => {
     expect(unionQuery.values).toEqual([]);
   });
 
+  it('should create a UNION query without alias', () => {
+    const select1 = Query.select
+      .from("table1")
+      .select(["column1"])
+      .where("column1 = ?", "value1");
+
+    const select2 = Query.select
+      .from("table2")
+      .select(["column1"])
+      .where("column1 = ?", "value2");
+
+    const unionQuery = new Union()
+      .add(select1, 'union')
+      .add(select2, 'union all')
+      .build();
+
+    expect(unionQuery.text).toBe('SELECT * FROM (\n (SELECT\n  "column1"\n FROM "table1"\n WHERE (column1 = $1))\n\n UNION ALL\n\n (SELECT\n  "column1"\n FROM "table2"\n WHERE (column1 = $2))\n) AS union_subquery');
+    expect(unionQuery.values).toEqual(['value1', 'value2']);
+  });
+
+  it('should support adding multiple queries with one union type', () => {
+    const select1 = Query.select
+      .from("table1")
+      .select(["column1"])
+      .where("column1 = ?", "value1");
+
+    const select2 = Query.select
+      .from("table2")
+      .select(["column1"])
+      .where("column1 = ?", "value2");
+
+    const select3 = Query.select
+      .from("table3")
+      .select(["column1"])
+      .where("column1 = ?", "value3");
+
+    const unionQuery = new Union()
+      .addManyOfType([select1, select2, select3], 'union all')
+      .as('union_table')
+      .build();
+
+    expect(unionQuery.text).toBe('SELECT * FROM (\n (SELECT\n  "column1"\n FROM "table1"\n WHERE (column1 = $1))\n\n UNION ALL\n\n (SELECT\n  "column1"\n FROM "table2"\n WHERE (column1 = $2))\n\n UNION ALL\n\n (SELECT\n  "column1"\n FROM "table3"\n WHERE (column1 = $3))\n) AS union_table');
+    expect(unionQuery.values).toEqual(['value1', 'value2', 'value3']);
+  });
+
   it('should throw if limit or offset is negative', () => {
     const union = new Union();
     expect(() => union.limit(-1)).toThrow('Limit must be a non-negative integer.');

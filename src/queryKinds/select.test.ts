@@ -33,10 +33,29 @@ describe('Select Query', () => {
 
     expect(query.text).toBe('SELECT\n u.id,\n COUNT(o.id) AS order_count,\n u.name,\n u.email,\n u.age\nFROM "users" AS u\nWHERE (u.age > $1)\nGROUP BY "u"."id", "u"."name"\nORDER BY "order_count" DESC\nLIMIT 10 OFFSET 5');
     expect(query.values).toEqual([18]);
-  })
+  });
+
+  it('should support joins conditions as statements', () => {
+    const selectQuery = new SelectQuery('orders', 'o')
+      .select(['o.id', 'o.total', 'c.name'])
+      .join({
+        type: 'INNER',
+        table: 'customers',
+        alias: 'c',
+        on: new Statement().and('o.customer_id = c.id').and('c.active = ?', true)
+      })
+      .where('o.total > ?', 100)
+
+    const query = selectQuery.build();
+    expect(query.text).toBe('SELECT\n "o"."id",\n "o"."total",\n "c"."name"\nFROM "orders" AS o\nINNER JOIN "customers" c\n ON (o.customer_id = c.id) AND (c.active = $1)\nWHERE (o.total > $2)');
+    expect(query.values).toEqual([true, 100]);
+
+    const clone = selectQuery.clone();
+    expect(clone.build()).toEqual(query);
+  });
 
   it('should handle joins correctly', () => {
-    const query = new SelectQuery('orders', 'o')
+    const selectQuery = new SelectQuery('orders', 'o')
       .select(['o.id', 'o.total', 'c.name'])
       .join({
         type: 'INNER',
@@ -45,10 +64,13 @@ describe('Select Query', () => {
         on: 'o.customer_id = c.id'
       })
       .where('o.total > ?', 100)
-      .build();
 
+    const query = selectQuery.build();
     expect(query.text).toBe('SELECT\n "o"."id",\n "o"."total",\n "c"."name"\nFROM "orders" AS o\nINNER JOIN "customers" c\n ON o.customer_id = c.id\nWHERE (o.total > $1)');
     expect(query.values).toEqual([100]);
+
+    const clone = selectQuery.clone();
+    expect(clone.build()).toEqual(query);
   });
 
   it('should handle multiple joins and complex where clauses', () => {
@@ -83,6 +105,17 @@ describe('Select Query', () => {
 
     expect(query.text).toBe('SELECT\n "p"."id",\n "p"."name",\n "c"."name" AS "category_name",\n "s"."name" AS "supplier_name"\nFROM "products" AS p\nLEFT JOIN "categories" c\n ON p.category_id = c.id\nINNER JOIN "suppliers" s\n ON p.supplier_id = s.id\nWHERE (p.price > $1)\n AND (c.active = $2)\n OR (s.reliable = $2)\nORDER BY "p"."name" ASC, "p"."price" DESC\nLIMIT 15 OFFSET 0');
     expect(query.values).toEqual([20, true]);
+  });
+
+  it('should be able to get columns from the query', () => {
+    const query = new SelectQuery('users', 'u')
+      .select(['u.id', 'u.name', 'u.email'])
+      .where('u.age > ?', 18)
+      .orderBy({ field: 'u.name', direction: 'ASC' })
+      .limit(10)
+      .offset(5);
+
+    expect(query.columns).toEqual(['"u"."id"', '"u"."name"', '"u"."email"']);
   });
 
   it('should handle no selections (select all)', () => {

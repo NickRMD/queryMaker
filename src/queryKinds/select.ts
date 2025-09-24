@@ -93,6 +93,14 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
+    * Gets the selected columns.
+    * @returns A readonly array of selected column names.
+    */
+  public get columns(): Readonly<string[]> {
+    return this.selectFields;
+  }
+
+  /**
     * Add an offset to the WHERE clause parameters.
     * This is useful when combining multiple statements to ensure parameter indices are correct.
     * @param offset The offset to add to the parameter indices.
@@ -490,8 +498,9 @@ export default class SelectQuery extends QueryDefinition {
     cloned.joins = this.joins.map(j => ({
       type: j.type,
       table: j.table,
+      alias: j.alias,
       on: typeof j.on === "string" ? `${j.on}` : j.on.clone()
-    }));
+    }) as Join);
     cloned.orderBys = [...this.orderBys];
     cloned.limitCount = this.limitCount;
     cloned.offsetCount = this.offsetCount;
@@ -603,7 +612,7 @@ export default class SelectQuery extends QueryDefinition {
     if (this.orderBys.length > 0) {
       const orders = this.orderBys.map(ob => {
         let field = '';
-        if(isOrderByField(ob)) field = ob.field;
+        if(isOrderByField(ob)) field = ob.field
         else field = ob.column;
 
         return `${field} ${ob.direction}`;

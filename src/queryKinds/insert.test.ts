@@ -146,6 +146,25 @@ describe('Insert Query', () => {
     const built = query.build();
     expect(built.text).toBe('WITH recent_employees AS (\nSELECT\n "name",\n "age"\nFROM "employees"\nWHERE (hired_at > $1)\n) \nINSERT INTO "users" ("name", "age")\nSELECT\n "name",\n "age"\nFROM "recent_employees"\nRETURNING "id", "name"');
     expect(built.values).toEqual(['2023-01-01']);
+
+    query.invalidate();
+    expect((query as any).getInternalParams()).not.toEqual(built.values);
+
+    const clone = query.clone();
+    expect(clone.build()).toEqual(built);
+  });
+
+  it('should support from select query', () => {
+    const selectQuery = new SelectQuery('employees', 'e')
+      .select(['e.nome AS name', 'age'])
+      .where('age > ?', 30);
+
+    const query = new InsertQuery('users')
+      .fromSelect(selectQuery)
+      .build();
+
+    expect(query.text).toBe('INSERT INTO "users" ("name", "age")\nSELECT\n "e"."nome" AS "name",\n "age"\nFROM "employees" AS e\nWHERE (age > $1)');
+    expect(query.values).toEqual([30]);
   });
 
   it('should support invalidating with CTEs', () => {
