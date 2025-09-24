@@ -2,8 +2,10 @@ import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
 import Join from "../types/Join.js";
+import QueryKind from "../types/QueryKind.js";
 import OrderBy, { isOrderByField } from "../types/OrderBy.js";
 import QueryDefinition from "./query.js";
+import Union from "./union.js";
 
 /**
   * SelectQuery class represents a SQL SELECT query.
@@ -30,11 +32,6 @@ export default class SelectQuery extends QueryDefinition {
     * The fields to select.
     */
   private selectFields: string[];
-
-  /**
-    * The WHERE clause statement.
-    */
-  private whereStatement: Statement | null = null;
 
   /**
     * The HAVING clause statement.
@@ -72,16 +69,6 @@ export default class SelectQuery extends QueryDefinition {
   private groupBySelectFields: boolean = false;
 
   /**
-    * The built SQL query string.
-    */
-  private builtQuery: string | null = null;
-
-  /**
-    * The CTEs (Common Table Expressions) for the query.
-    */
-  private ctes: CteMaker | null = null;
-
-  /**
     * If true, disables deep analysis of the query for duplicate parameters.
     */
   private disabledAnalysis: boolean = false;
@@ -106,6 +93,14 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
+    * Gets the selected columns.
+    * @returns A readonly array of selected column names.
+    */
+  public get columns(): Readonly<string[]> {
+    return this.selectFields;
+  }
+
+  /**
     * Add an offset to the WHERE clause parameters.
     * This is useful when combining multiple statements to ensure parameter indices are correct.
     * @param offset The offset to add to the parameter indices.
@@ -117,6 +112,28 @@ export default class SelectQuery extends QueryDefinition {
       this.whereStatement.invalidate();
     }
     return this;
+  }
+
+  /**
+    * Resets the WHERE clause parameter offset to zero.
+    * This is useful when reusing the query in different contexts.
+    * @return The current SelectQuery instance for chaining.
+    */
+  public resetWhereOffset(): this {
+    if (this.whereStatement) {
+      this.whereStatement.setOffset(1);
+      this.whereStatement.invalidate();
+    }
+    return this;
+  }
+
+  /**
+    * Invalidates the current state of the query, forcing a rebuild on the next operation.
+    * @returns void
+    */
+  public override invalidate(): void {
+    super.invalidate();
+    if(this.havingStatement) this.havingStatement.invalidate();
   }
 
   /**
@@ -171,6 +188,36 @@ export default class SelectQuery extends QueryDefinition {
     } else {
       this.selectFields = 
         SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
+    }
+    return this;
+  }
+
+  /**
+    * Sets raw SQL fields to select from, without any escaping.
+    * Can accept a single field as a string or multiple fields as an array of strings.
+    * @param rawFields The raw SQL fields to select.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public rawSelect(rawFields: string | string[]): this {
+    if (Array.isArray(rawFields)) {
+      this.selectFields = [...rawFields];
+    } else {
+      this.selectFields = [rawFields];
+    }
+    return this;
+  }
+
+  /**
+    * Adds raw SQL fields to the existing selection, without any escaping.
+    * Can accept a single field as a string or multiple fields as an array of strings.
+    * @param rawFields The raw SQL fields to add to the selection.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public addRawSelect(rawFields: string | string[]): this {
+    if (Array.isArray(rawFields)) {
+      this.selectFields.push(...rawFields);
+    } else {
+      this.selectFields.push(rawFields);
     }
     return this;
   }
@@ -382,9 +429,11 @@ export default class SelectQuery extends QueryDefinition {
     this.groupBys = [];
     this.groupBySelectFields = false;
     this.builtQuery = null;
+    this.builtParams = null;
     this.ctes = null;
     this.havingStatement = null;
     this.disabledAnalysis = false;
+    this.schemas = [];
   }
 
   /**
@@ -395,9 +444,9 @@ export default class SelectQuery extends QueryDefinition {
     */
   public groupBy(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.groupBys.push(...fields);
+      this.groupBys.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
-      this.groupBys.push(fields);
+      this.groupBys.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
     }
     return this;
   }
@@ -413,19 +462,11 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
-    * Gets whether the query has been built.
-    * @returns boolean The built status of the query.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /**
     * This is a SELECT query.
     * @returns 'SELECT' The kind of query.
     */
-  public get kind(): 'SELECT' {
-    return 'SELECT';
+  public get kind() {
+    return QueryKind.SELECT;
   }
 
   /**
@@ -434,22 +475,9 @@ export default class SelectQuery extends QueryDefinition {
     * @returns any[] The parameters for the built query.
     */
   public getParams(): any[] {
-    return this.build().values;
-  }
-
-  /**
-    * Invalidates the current built query, forcing a rebuild on the next operation.
-    * Also invalidates any nested statements or CTE queries.
-    * @returns void
-    */
-  public invalidate(): void {
-    this.builtQuery = null;
-    if (this.whereStatement) this.whereStatement.invalidate();
-    if (this.ctes) {
-      for (const cte of this.ctes['ctes']) {
-        cte['query'].invalidate();
-      }
-    }
+    if (!this.builtParams) this.build();
+    if (!this.builtParams) throw new Error("Failed to build query.");
+    return this.builtParams;  
   }
 
   /**
@@ -458,15 +486,21 @@ export default class SelectQuery extends QueryDefinition {
     * @returns A new SelectQuery instance that is a clone of the current instance.
     */
   public clone(): SelectQuery {
-    const cloned = new SelectQuery(this.table, this.tableAlias, this.groupBySelectFields);
+    const cloned = new SelectQuery();
+    cloned.table = this.table;
+    cloned.tableAlias = this.tableAlias;
+    this.groupBySelectFields = this.groupBySelectFields;
+    cloned.flavor = this.flavor;
+    cloned.schemas = [...this.schemas];
     cloned.distinctSelect = this.distinctSelect;
     cloned.selectFields = [...this.selectFields];
     cloned.whereStatement = this.whereStatement ? this.whereStatement.clone() : null;
     cloned.joins = this.joins.map(j => ({
       type: j.type,
       table: j.table,
+      alias: j.alias,
       on: typeof j.on === "string" ? `${j.on}` : j.on.clone()
-    }));
+    }) as Join);
     cloned.orderBys = [...this.orderBys];
     cloned.limitCount = this.limitCount;
     cloned.offsetCount = this.offsetCount;
@@ -476,113 +510,25 @@ export default class SelectQuery extends QueryDefinition {
   }
 
   /**
-    * Makes a UNION ALL of the current query with another SelectQuery.
-    * The resulting query will select all fields from both queries.
-    * Note: The resulting query cannot be cloned.
-    * @param query The SelectQuery to union with the current query.
-    * @returns A new SelectQuery instance representing the UNION ALL of the two queries.
+    * Combines the current SELECT query with another SELECT query using UNION ALL.
+    * @param query The SELECT query to combine with.
+    * @returns A new Union instance representing the combined queries.
     */
-  public unionAll(query: SelectQuery): SelectQuery {
-    let firstQuery;
-    try {
-      firstQuery = this.clone().build();
-    } catch(e) {
-      if (e instanceof Error && e.message.includes("UNION")) {
-        firstQuery = this.build();
-      } else throw e;
-    }
-
-    const secondQuery = query
-      .clone()
-      .build();
-
-    const texts = [firstQuery.text, secondQuery.text];
-    const values = [...firstQuery.values, ...secondQuery.values];
-
-    let paramIndex = 1;
-    let resultTexts: string[] = [];
-    for (const text of texts) {
-      resultTexts.push(text.replace(/\$(\d+)/g, () =>
-        `$${paramIndex++}`
-      ));
-    }
-    const text = resultTexts.join('\nUNION ALL\n'); 
-
-    const unionQuery = new SelectQuery();
-    unionQuery.builtQuery = text;
-    unionQuery.ctes = null;
-    unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = null;
-    unionQuery.table = '';
-    unionQuery.tableAlias = null;
-    unionQuery.distinctSelect = false;
-    unionQuery.joins = [];
-    unionQuery.orderBys = [];
-    unionQuery.limitCount = null;
-    unionQuery.offsetCount = null;
-    unionQuery.groupBys = [];
-    unionQuery.groupBySelectFields = false;
-    unionQuery.clone = () => {
-      throw new Error("Cannot clone a UNION ALL query.");
-    }
-    unionQuery.build = () => ({ text: text, values: values })
-
-    return unionQuery;
+  public unionAll(query: SelectQuery): Union {
+    return new Union()
+      .add(this)
+      .add(query, 'UNION ALL');
   }
 
   /**
-    * Makes a UNION of the current query with another SelectQuery.
-    * The resulting query will select all fields from both queries, removing duplicates.
-    * Note: The resulting query cannot be cloned.
-    * @param query The SelectQuery to union with the current query.
-    * @returns A new SelectQuery instance representing the UNION of the two queries.
+    * Combines the current SELECT query with another SELECT query using UNION.
+    * @param query The SELECT query to combine with.
+    * @returns A new Union instance representing the combined queries.
     */
-  public union(query: SelectQuery): SelectQuery {
-    let firstQuery;
-    try {
-      firstQuery = this.clone().build();
-    } catch(e) {
-      if (e instanceof Error && e.message.includes("UNION")) {
-        firstQuery = this.build();
-      } else throw e;
-    }
-
-    const secondQuery = query
-      .clone()
-      .build();
-
-    const texts = [firstQuery.text, secondQuery.text];
-    const values = [...firstQuery.values, ...secondQuery.values];
-
-    let paramIndex = 1;
-    let resultTexts: string[] = [];
-    for (const text of texts) {
-      resultTexts.push(text.replace(/\$(\d+)/g, () =>
-        `$${paramIndex++}`
-      ));
-    }
-    const text = resultTexts.join('\nUNION\n'); 
-
-    const unionQuery = new SelectQuery();
-    unionQuery.builtQuery = text;
-    unionQuery.ctes = null;
-    unionQuery.selectFields = ['*'];
-    unionQuery.whereStatement = null;
-    unionQuery.table = '';
-    unionQuery.tableAlias = null;
-    unionQuery.distinctSelect = false;
-    unionQuery.joins = [];
-    unionQuery.orderBys = [];
-    unionQuery.limitCount = null;
-    unionQuery.offsetCount = null;
-    unionQuery.groupBys = [];
-    unionQuery.groupBySelectFields = false;
-    unionQuery.clone = () => {
-      throw new Error("Cannot clone a UNION query.");
-    }
-    unionQuery.build = () => ({ text: text, values: values })
-
-    return unionQuery;
+  public union(query: SelectQuery): Union {
+    return new Union()
+      .add(this)
+      .add(query, 'UNION');
   }
 
   /**
@@ -625,7 +571,7 @@ export default class SelectQuery extends QueryDefinition {
       const onClause = 
         typeof join.on === 'string' ? join.on
         : (() => {
-            join.on.enableWhere();
+            join.on.disableWhere();
             join.on.addOffset(currentOffset);
             const stmt = join.on.build(false);
             currentOffset += stmt.values.length;
@@ -666,7 +612,7 @@ export default class SelectQuery extends QueryDefinition {
     if (this.orderBys.length > 0) {
       const orders = this.orderBys.map(ob => {
         let field = '';
-        if(isOrderByField(ob)) field = ob.field;
+        if(isOrderByField(ob)) field = ob.field
         else field = ob.column;
 
         return `${field} ${ob.direction}`;
@@ -710,7 +656,8 @@ export default class SelectQuery extends QueryDefinition {
         deepAnalysis
       );
       this.builtQuery = analyzed.text;
-      return { text: this.builtQuery, values: analyzed.values };
+      this.builtParams = analyzed.values;
+      return { text: this.builtQuery, values: this.builtParams };
     }
   }
 
@@ -720,14 +667,8 @@ export default class SelectQuery extends QueryDefinition {
     * @returns string The SQL query string.
     */
   public toSQL(): string {
-    return this.build().text;
-  }
-
-  /**
-    * Gets the query definition itself.
-    * @returns QueryDefinition The current SelectQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
+    if (!this.builtQuery) this.build();
+    if (!this.builtQuery) throw new Error("Failed to build query.");
+    return this.builtQuery;
   }
 }

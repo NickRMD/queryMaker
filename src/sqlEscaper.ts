@@ -21,10 +21,34 @@ export default class SqlEscaper {
     */
   public static escape(
     value: string,
-    escapeChar: string = "\"",
-    escapeCharReplacement: string = "\"\""
+    escapeCharLeft: string | RegExp = "\"",
+    escapeCharRight: string | RegExp | null = null,
+    escapeCharLeftReplacement: string = "\"\"",
+    escapeCharRightReplacement: string | null = null
   ): string {
-    return `${escapeChar}${value.replace(new RegExp(escapeChar, "g"), escapeCharReplacement)}${escapeChar}`;
+    const escapeCharLeftRegex = new RegExp(escapeCharLeft, "g");
+
+    if (!escapeCharRight) {
+      escapeCharRight = escapeCharLeft;
+    }
+
+    if (!escapeCharRightReplacement) {
+      escapeCharRightReplacement = escapeCharLeftReplacement;
+    }
+
+    if (escapeCharLeft === escapeCharRight) {
+      return `${escapeCharLeft}${value.replace(escapeCharLeftRegex, escapeCharLeftReplacement)}${escapeCharRight}`;
+    }
+
+    if (escapeCharLeft !== escapeCharRight) {
+      const escapeCharRightRegex = new RegExp(escapeCharRight, "g");
+      value = value.replace(escapeCharRightRegex, escapeCharRightReplacement);
+      value = value.replace(escapeCharLeftRegex, escapeCharLeftReplacement);
+    }
+
+    escapeCharLeft = typeof escapeCharLeft === "string" ? escapeCharLeft.replace("\\", "") : "";
+    escapeCharRight = typeof escapeCharRight === "string" ? escapeCharRight.replace("\\", "") : "";
+    return `${escapeCharLeft}${value}${escapeCharRight}`;
   }
 
   /**
@@ -77,26 +101,28 @@ export default class SqlEscaper {
       }
     }
 
+    try {
     const escapedIdentifier = match(flavor)
       .returnType<string | undefined>()
       .with(P.union(sqlFlavor.postgres, sqlFlavor.sqlite), () => {
-        return this.escape(identifier, "\"", "\"\"");
+        return this.escape(identifier, "\"", null, "\"\"", null);
       })
       .with(sqlFlavor.mysql, () => {
-        return this.escape(identifier, "`", "``");
+        return this.escape(identifier, "`", null, "``", null);
       })
       .with(sqlFlavor.mssql, () => {
-        return this.escape(identifier, "[", "]]");
+        return this.escape(identifier, "\\[", "]", "]]", "[[");
       })
       .with(sqlFlavor.oracle, () => {
-        return this.escape(identifier, "\"", "\"\"");
+        return this.escape(identifier, "\"", null, "\"\"", null);
       })
       .exhaustive();
 
-    if (escapedIdentifier) {
-      return escapedIdentifier;
-    } else {
-      throw new Error(`Unsupported SQL flavor: ${flavor}`);
+      return escapedIdentifier!;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Pattern matching error")) {
+        throw new Error(`Unsupported SQL flavor: ${flavor}`);
+      } else throw error;
     }
   }
 
@@ -114,11 +140,17 @@ export default class SqlEscaper {
     flavor: sqlFlavor
   ): string[] {
     return identifiers.map(identifier => {
+      if (identifier.trim().toUpperCase().startsWith("AS ")) {
+        throw new Error(`Invalid identifier with AS clause: ${identifier}`);
+      } else if (identifier.trim().toUpperCase().endsWith(" AS")) {
+        throw new Error(`Invalid identifier with AS clause: ${identifier}`);
+      }
+
       const parts = identifier.split(/\s+AS\s+/i);
       if (parts.length === 2) {
         const [column, alias] = parts;
 
-        if (!column || !alias) {
+        if (!column?.trim() || !alias?.trim()) {
           throw new Error(`Invalid identifier with AS clause: ${identifier}`);
         }
 
@@ -155,7 +187,7 @@ export default class SqlEscaper {
     if (parts.length === 2) {
       const [schema, table] = parts;
 
-      if (!schema || !table) {
+      if (!schema?.trim() || !table?.trim()) {
         throw new Error(`Invalid table name with schema: ${tableName}`);
       }
 

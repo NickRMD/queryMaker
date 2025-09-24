@@ -1,6 +1,7 @@
 import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import ColumnValue from "../types/ColumnValue.js";
+import QueryKind from "../types/QueryKind.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
@@ -18,10 +19,6 @@ export default class InsertQuery extends QueryDefinition {
   private selectQuery: SelectQuery | null = null;
   /** The fields to be returned after the insert operation. */
   private returningFields: string[] = [];
-  /** The final built SQL query string. */
-  private builtQuery: string | null = null;
-  /** Optional Common Table Expressions (CTEs) for the query. */
-  private ctes: CteMaker | null = null;
 
   /**
     * Creates an instance of InsertQuery.
@@ -29,7 +26,7 @@ export default class InsertQuery extends QueryDefinition {
     */
   constructor(table?: string) {
     super();
-    this.table = SqlEscaper.escapeTableName(table || '', this.flavor);
+    this.table = table ? SqlEscaper.escapeTableName(table, this.flavor) : '';
   }
 
   /**
@@ -84,6 +81,19 @@ export default class InsertQuery extends QueryDefinition {
   }
 
   /**
+    * Specifies the columns to be inserted without associated values.
+    * This is useful when inserting data from a SELECT query.
+    * @param columns - The names of the columns to be inserted.
+    * @returns The current InsertQuery instance for method chaining.
+    */
+  public columns(...columns: string[]): this {
+    this.columnValues = columns.map(column => ({ 
+      column: SqlEscaper.escapeIdentifier(column, this.flavor), value: undefined 
+    }));
+    return this;
+  }
+
+  /**
     * Specifies a SELECT query to insert data from.
     * This allows inserting records based on the results of another query.
     * @param query - The SELECT query to insert data from.
@@ -108,12 +118,28 @@ export default class InsertQuery extends QueryDefinition {
     return this;
   }
 
+  /**
+    * Adds fields to the existing RETURNING clause.
+    * @param fields - A single field or an array of fields to be added to the RETURNING clause.
+    * @returns The current InsertQuery instance for method chaining.
+    */
+  public addReturning(fields: string | string[]): this {
+    if (Array.isArray(fields)) {
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
+    } else {
+      this.returningFields.push(...SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
+    }
+    return this;
+  }
+
   /** 
     * Creates a deep clone of the current InsertQuery instance.
     * @returns A new InsertQuery instance with the same properties as the original.
     */
-  public clone(): QueryDefinition {
-    const cloned = new InsertQuery(this.table);
+  public clone(): InsertQuery {
+    const cloned = new InsertQuery();
+    cloned.table = this.table;
+    cloned.schemas = [...this.schemas];
     cloned.columnValues = JSON.parse(JSON.stringify(this.columnValues));
     cloned.selectQuery = this.selectQuery ? this.selectQuery.clone() : null;
     cloned.returningFields = [...this.returningFields];
@@ -125,24 +151,8 @@ export default class InsertQuery extends QueryDefinition {
     * This an INSERT query.
     * @returns The kind of SQL operation, which is 'INSERT' for this class.
     */
-  public get kind(): 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT' {
-    return 'INSERT';
-  }
-
-  /**
-    * Indicates whether the query has been built and is ready for execution.
-    * @returns True if the query has been built; otherwise, false.
-    */
-  public get isDone(): boolean {
-    return this.builtQuery !== null;
-  }
-
-  /** 
-    * Provides access to the current InsertQuery instance.
-    * @returns The current InsertQuery instance.
-    */
-  public get query(): QueryDefinition {
-    return this;
+  public get kind() {
+    return QueryKind.INSERT;
   }
 
   /** 
@@ -165,6 +175,7 @@ export default class InsertQuery extends QueryDefinition {
     */
   public reset(): void {
     this.table = '';
+    this.schemas = [];
     this.columnValues = [];
     this.selectQuery = null;
     this.returningFields = [];
@@ -176,7 +187,7 @@ export default class InsertQuery extends QueryDefinition {
     * Retrieves the parameters associated with the query.
     * @returns An array of parameters for the query.
     */
-  public getParams(): any[] {
+  private getInternalParams(): any[] {
     if (!this.builtQuery) this.build();
     let params: any[] = [];
     if (this.columnValues.length > 0) {
@@ -188,6 +199,16 @@ export default class InsertQuery extends QueryDefinition {
       params = [...this.ctes.build().values, ...params];
     }
     return params;
+  }
+
+  /** 
+    * Retrieves the parameters associated with the query, building the query if necessary.
+    * @returns An array of parameters for the query.
+    */
+  public getParams(): any[] {
+    if (!this.builtQuery) this.build();
+    if (!this.builtParams) throw new Error('Failed to build query parameters.');
+    return this.builtParams;
   }
 
   /** 
@@ -221,7 +242,21 @@ export default class InsertQuery extends QueryDefinition {
         const valuePlaceholders = this.columnValues.map((_, idx) => `$${idx + 1}`);
         insertClause += ` VALUES (${valuePlaceholders.join(', ')})`;
       }
-    } 
+    } else if (this.selectQuery) {
+      // Use columns from select query if not specified
+      const selectColumns = this.selectQuery.columns;
+      if (selectColumns.length > 0 && columns.length === 0) {
+        const parsedColumns = selectColumns.map(col => {
+          const regex = /^(?:(?:"?[\w$]+"?\.)?"?([\w$]+)"?(?:\s+AS\s+"?([\w$]+)"?)?)$/i;
+          const match = col.match(regex);
+          if (match) {
+            return SqlEscaper.escapeIdentifier(match[2]! || match[1]!, this.flavor);
+          }
+          return SqlEscaper.escapeIdentifier(col, this.flavor);
+        });
+        insertClause = `INSERT INTO ${this.table} (${parsedColumns.join(', ')})`;
+      }
+    }
 
     if (this.selectQuery) {
       const selectBuilt = this.selectQuery.build();
@@ -247,12 +282,13 @@ export default class InsertQuery extends QueryDefinition {
 
     const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
       this.builtQuery,
-      [...cteValues, ...this.getParams()],
+      [...cteValues, ...this.getInternalParams()],
       deepAnalysis
     );
 
     this.builtQuery = analyzed.text;
-    return { text: this.builtQuery, values: analyzed.values };
+    this.builtParams = analyzed.values;
+    return { text: this.builtQuery, values: this.builtParams };
   }
 
   /** 
@@ -260,6 +296,9 @@ export default class InsertQuery extends QueryDefinition {
     * @returns The SQL query string.
     */
   public toSQL(): string {
-    return this.build().text;
+    if (!this.builtQuery) this.build();
+    if (!this.builtQuery) throw new Error('Failed to build query.');
+
+    return this.builtQuery;
   }
 }
