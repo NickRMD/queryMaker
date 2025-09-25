@@ -124,7 +124,9 @@ export default class UpdateQuery extends QueryDefinition {
         value: values.value ?? null
       }];
     } else if (typeof values === 'object' && !Array.isArray(values)) {
-      this.setValues = Object.entries(values).map(([key, val]) => ({
+      this.setValues = Object.entries(values).filter(([, val]) => {
+        return val !== undefined;
+      }).map(([key, val]) => ({
         setColumn: SqlEscaper.escapeTableName(key, this.flavor),
         value: val
       }));
