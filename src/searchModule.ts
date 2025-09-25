@@ -32,7 +32,7 @@ export default class SearchModule {
     query: string,
     caseInsensitive: boolean = true,
     statementKind: StatementKind = 'AND'
-  ): typeof this.statement {
+  ) {
     if (caseInsensitive) {
       this.statement.ilike(field, `%${query}%`, statementKind);
     } else {
@@ -96,7 +96,7 @@ export default class SearchModule {
     query: string,
     caseInsensitive: boolean = true,
     statementKind: StatementKind = 'AND'
-  ): typeof this.statement {
+  ) {
     const words = query.split(' ').filter(word => word.trim());
     words.forEach(word => {
       if (caseInsensitive) {
@@ -124,7 +124,7 @@ export default class SearchModule {
     query: string,
     similarityThreshold: number = 0.3,
     statementKind: StatementKind = 'AND'
-  ): typeof this.statement {
+  ) {
     const fuzzyStatement = Query.statement
       .raw('', `${field} % ?`, query)
       .raw('AND', `similarity(${field}, ?) >= ?`, query, similarityThreshold);
