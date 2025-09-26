@@ -91,6 +91,7 @@ jobs:
         with:
           tag: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
+          commit: ${{ github.sha }}
           body: |
             ## Changes
             
@@ -112,6 +113,7 @@ jobs:
         with:
           tag: v${{ steps.version.outputs.version }}
           name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
+          commit: ${{ github.sha }}
           body: |
             ## ${{ steps.version.outputs.branch }} Release
 
