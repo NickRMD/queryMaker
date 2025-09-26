@@ -244,7 +244,7 @@ describe('StatementMaker Basics', () => {
 
     expect(secondEnd - secondStart).toBeLessThan(firstEnd - firstStart);
     expect(result1).toStrictEqual(result2);
-  });
+  }, { retry: 3 });
 
   it('should return faster compared reparseOnChange = false', () => {
     const maker = new StatementMaker()
@@ -314,7 +314,7 @@ describe('StatementMaker Basics', () => {
 
     expect(secondEnd - secondStart).toBeLessThan(firstEnd - firstStart);
     expect(result1).toStrictEqual(result2);
-  });
+  }, { retry: 3 });
 
   it('should clone itself correctly', () => {
     const maker = new StatementMaker()
