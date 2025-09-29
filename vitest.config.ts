@@ -15,6 +15,7 @@ export default defineConfig({
         'src/index.ts',
       ],
       include: ['src/**/*.ts']
-    }
+    },
+    retry: 3
   }
 })

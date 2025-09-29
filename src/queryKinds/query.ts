@@ -9,6 +9,8 @@ import sqlFlavor from "../types/sqlFlavor.js";
 import CteMaker from "../cteMaker.js";
 import Statement from "../statementMaker.js";
 import QueryKind from "../types/QueryKind.js";
+import Join, { isJoinTable } from "../types/Join.js";
+import SqlEscaper from "../sqlEscaper.js";
 
 /**
   * An array of function names that can be used to execute SQL queries.
@@ -98,6 +100,25 @@ export default abstract class QueryDefinition<S = any> {
     */
   public get isDone(): boolean {
     return this.builtQuery !== null && this.builtParams !== null;
+  }
+
+  /**
+    * Parses a Join object to ensure proper escaping and cloning of subqueries.
+    * @param join The Join object to parse.
+    * @returns The parsed Join object.
+    */
+  protected parseJoinObject(join: Join): Join {
+    if (isJoinTable(join)) {
+      return {
+        ...join,
+        table: SqlEscaper.escapeTableName(join.table, this.flavor),
+      }
+    } else {
+      return {
+        ...join,
+        subQuery: join.subQuery.clone()
+      }
+    }
   }
 
   /**

@@ -11,6 +11,7 @@ export interface OrderByField {
   field: string;
   /** The direction of sorting: 'ASC' for ascending or 'DESC' for descending. */
   direction: Direction;
+  column?: never;
 }
 
 /**
@@ -22,6 +23,7 @@ export interface OrderByColumn {
   column: string;
   /** The direction of sorting: 'ASC' for ascending or 'DESC' for descending. */
   direction: Direction;
+  field?: never;
 }
 
 type OrderBy = OrderByField | OrderByColumn

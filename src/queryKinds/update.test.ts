@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import UpdateQuery from "./update.js";
 import Statement from "../statementMaker.js";
-import { Cte } from "../cteMaker.js";
+import CteMaker, { Cte } from "../cteMaker.js";
 import SelectQuery from "./select.js";
 
 describe('Update Query', () => {
@@ -318,6 +318,177 @@ describe('Update Query', () => {
     const secondBuild = query.build();
     expect(secondBuild.text).toBe('WITH active_teams AS (\nSELECT\n "id",\n "name"\nFROM "teams"\nWHERE (active = $1)\n)\nUPDATE "users" u\nSET "u"."status" = $2\nFROM "active_teams" at\nWHERE (u.team_id = at.id)');
     expect(secondBuild.values).toEqual([false, 'inactive']);
+  });
+
+  it('should support subQuery in joins', () => {
+    const subQuery = new SelectQuery('departments', 'd')
+      .select(['d.id', 'd.name'])
+      .where('d.active = ?', true);
+
+    const query = new UpdateQuery('employees', 'e')
+      .using('companies', 'c')
+      .join({
+        subQuery,
+        alias: 'dept',
+        type: 'INNER',
+        on: 'e.department_id = dept.id'
+      })
+      .set({ 'e.status': 'active' })
+      .where(
+        new Statement()
+          .and('e.company_id = c.id')
+          .and('c.active = ?', true)
+          .and('dept.name = ?', 'Engineering')
+      )
+      .build();
+
+    expect(query.text).toBe('UPDATE "employees" e\nSET "e"."status" = $1\nFROM "companies" c\nINNER JOIN (\n SELECT\n  "d"."id",\n  "d"."name"\n FROM "departments" AS d\n WHERE (d.active = $2)\n) dept\n ON e.department_id = dept.id\nWHERE (e.company_id = c.id)\n AND (c.active = $2)\n AND (dept.name = $3)');
+    expect(query.values).toEqual(['active', true, 'Engineering']);
+
+    const subQuery2 = new SelectQuery('departments', 'd')
+      .select(['d.id', 'd.name'])
+      .where('d.active = ?', true);
+
+    const query2 = new UpdateQuery('employees', 'e')
+      .using('companies', 'c')
+      .join({
+        subQuery: subQuery2,
+        alias: 'dept',
+        type: 'INNER',
+        on: new Statement()
+          .and('e.department_id = dept.id')
+          .and('dept.name = ?', 'Engineering')
+      })
+      .set({ 'e.status': 'active' })
+      .where(
+        new Statement()
+          .and('e.company_id = c.id')
+          .and('c.active = ?', true)
+      )
+      .build();
+
+    expect(query2.text).toBe('UPDATE "employees" e\nSET "e"."status" = $1\nFROM "companies" c\nINNER JOIN (\n SELECT\n  "d"."id",\n  "d"."name"\n FROM "departments" AS d\n WHERE (d.active = $2)\n) dept\n ON (e.department_id = dept.id) AND (dept.name = $3)\nWHERE (e.company_id = c.id)\n AND (c.active = $2)');
+    expect(query2.values).toEqual(['active', true, 'Engineering']);
+  });
+
+  it('should support multiple joins with subQueries', () => {
+    const regionSubQuery = new SelectQuery('regions', 'r')
+      .select(['r.id', 'r.name'])
+      .where('r.active = ?', true);
+
+    const departmentSubQuery = new SelectQuery('departments', 'd')
+      .select(['d.id', 'd.name'])
+      .where('d.active = ?', true);
+
+    const query = new UpdateQuery('employees', 'e')
+      .using('companies', 'c')
+      .join([
+        {
+          subQuery: regionSubQuery,
+          alias: 'reg',
+          type: 'INNER',
+          on: 'e.region_id = reg.id'
+        },
+        {
+          subQuery: departmentSubQuery,
+          alias: 'dept',
+          type: 'LEFT',
+          on: new Statement()
+            .and('e.department_id = dept.id')
+            .and('dept.name = ?', 'Engineering')
+        }
+      ])
+      .set({ 'e.status': 'active' })
+      .where(
+        new Statement()
+          .and('e.company_id = c.id')
+          .and('c.active = ?', true)
+          .and('reg.name = ?', 'North')
+      )
+      .build();
+
+    expect(query.text).toBe('UPDATE "employees" e\nSET "e"."status" = $1\nFROM "companies" c\nINNER JOIN (\n SELECT\n  "r"."id",\n  "r"."name"\n FROM "regions" AS r\n WHERE (r.active = $2)\n) reg\n ON e.region_id = reg.id\nLEFT JOIN (\n SELECT\n  "d"."id",\n  "d"."name"\n FROM "departments" AS d\n WHERE (d.active = $2)\n) dept\n ON (e.department_id = dept.id) AND (dept.name = $3)\nWHERE (e.company_id = c.id)\n AND (c.active = $2)\n AND (reg.name = $4)');
+    expect(query.values).toEqual(['active', true, 'Engineering', 'North']);
+  });
+
+  it('should support multiple CTEs', () => {
+    const query = new UpdateQuery('employees', 'e')
+      .with([
+        new Cte(
+          'active_companies',
+          new SelectQuery('companies', 'c')
+            .select(['c.id', 'c.name'])
+            .where('c.active = ?', true),
+          false
+        ),
+        new Cte(
+          'active_departments',
+          new SelectQuery('departments', 'd')
+            .select(['d.id', 'd.name'])
+            .where('d.active = ?', true),
+          false
+        )
+      ])
+      .using('active_companies', 'ac')
+      .join({
+        table: 'active_departments',
+        alias: 'ad',
+        type: 'INNER',
+        on: new Statement()
+          .and('e.department_id = ad.id')
+          .and('ad.name = ?', 'Engineering')
+      })
+      .set({ 'e.status': 'active' })
+      .where(
+        new Statement()
+          .and('e.company_id = ac.id')
+          .and('ac.name = ?', 'TechCorp')
+      )
+      .build();
+
+    expect(query.text).toBe('WITH active_companies AS (\nSELECT\n "c"."id",\n "c"."name"\nFROM "companies" AS c\nWHERE (c.active = $1)\n), active_departments AS (\nSELECT\n "d"."id",\n "d"."name"\nFROM "departments" AS d\nWHERE (d.active = $1)\n)\nUPDATE "employees" e\nSET "e"."status" = $2\nFROM "active_companies" ac\nINNER JOIN "active_departments" ad\n ON (e.department_id = ad.id) AND (ad.name = $3)\nWHERE (e.company_id = ac.id)\n AND (ac.name = $4)');
+    expect(query.values).toEqual([true, 'active', 'Engineering', 'TechCorp']);
+  });
+
+  it('should support CTEs with CTEMaker directly', () => {
+    const cteMaker = new CteMaker(
+      new Cte(
+        'active_companies',
+        new SelectQuery('companies', 'c')
+          .select(['c.id', 'c.name'])
+          .where('c.active = ?', true),
+        false
+      ),
+      new Cte(
+        'active_departments',
+        new SelectQuery('departments', 'd')
+          .select(['d.id', 'd.name'])
+          .where('d.active = ?', true),
+        false
+      )
+    );
+
+    const query = new UpdateQuery('employees', 'e')
+      .with(cteMaker)
+      .using('active_companies', 'ac')
+      .join({
+        table: 'active_departments',
+        alias: 'ad',
+        type: 'INNER',
+        on: new Statement()
+          .and('e.department_id = ad.id')
+          .and('ad.name = ?', 'Engineering')
+      })
+      .set({ 'e.status': 'active' })
+      .where(
+        new Statement()
+          .and('e.company_id = ac.id')
+          .and('ac.name = ?', 'TechCorp')
+      )
+      .build();
+
+    expect(query.text).toBe('WITH active_companies AS (\nSELECT\n "c"."id",\n "c"."name"\nFROM "companies" AS c\nWHERE (c.active = $1)\n), active_departments AS (\nSELECT\n "d"."id",\n "d"."name"\nFROM "departments" AS d\nWHERE (d.active = $1)\n)\nUPDATE "employees" e\nSET "e"."status" = $2\nFROM "active_companies" ac\nINNER JOIN "active_departments" ad\n ON (e.department_id = ad.id) AND (ad.name = $3)\nWHERE (e.company_id = ac.id)\n AND (ac.name = $4)');
+    expect(query.values).toEqual([true, 'active', 'Engineering', 'TechCorp']);
   });
 
 });
