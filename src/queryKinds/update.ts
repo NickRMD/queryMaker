@@ -1,7 +1,7 @@
 import CteMaker, { Cte } from "../cteMaker.js";
 import SqlEscaper from "../sqlEscaper.js";
 import Statement from "../statementMaker.js";
-import Join from "../types/Join.js";
+import Join, { isJoinTable } from "../types/Join.js";
 import QueryKind from "../types/QueryKind.js";
 import SetValue from "../types/SetValue.js";
 import QueryDefinition from "./query.js";
@@ -87,17 +87,13 @@ export default class UpdateQuery extends QueryDefinition {
     * @param join - The JOIN clause(s) to be added.
     * @returns The current UpdateQuery instance for method chaining.
     */
-  public join(join: Join | Join[]): this {
+  public join(
+    join: Join | Join[] 
+  ): this {
     if (Array.isArray(join)) {
-      this.joins.push(...join.map(j => ({
-        ...j,
-        table: SqlEscaper.escapeTableName(j.table, this.flavor),
-      })));
+      this.joins.push(...join.map(j => this.parseJoinObject(j)));
     } else {
-      this.joins.push({
-        ...join,
-        table: SqlEscaper.escapeTableName(join.table, this.flavor),
-      });
+      this.joins.push(this.parseJoinObject(join));
     }
     return this;
   }
@@ -288,21 +284,44 @@ export default class UpdateQuery extends QueryDefinition {
     }
 
     let joinClauses = '';
-    let currentOffset = setValues.length;
+    let currentOffset = setValues.length + cteValues.length;
     let parametersToAdd: any = [];
     for (const join of this.joins) {
-      const onClause = 
-        typeof join.on === 'string' ? join.on
-        : (() => {
-            join.on.disableWhere();
-            join.on.addOffset(currentOffset);
-            const stmt = join.on.build(false);
-            currentOffset += stmt.values.length;
-            parametersToAdd.push(...stmt.values);
-            return stmt.statement;
-          })();
-      joinClauses += 
-        `${joinClauses ? '\n' : ''}${join.type.toUpperCase()} JOIN ${join.table} ${join.alias}\n ON ${onClause}`;
+      if(isJoinTable(join)) {
+        const onClause = 
+          typeof join.on === 'string' ? join.on
+          : (() => {
+              join.on.disableWhere();
+              join.on.addOffset(currentOffset);
+              const stmt = join.on.build(false);
+              currentOffset += stmt.values.length;
+              parametersToAdd.push(...stmt.values);
+              return stmt.statement;
+            })();
+        joinClauses += 
+          `${joinClauses ? '\n' : ''}${join.type.toUpperCase()} JOIN ${join.table} ${join.alias}\n ON ${onClause}`;
+      } else {
+        join.subQuery.resetWhereOffset();
+        join.subQuery.addWhereOffset(currentOffset);
+        (join.subQuery as any).disabledAnalysis = true;
+        const subQueryBuilt = join.subQuery.build(deepAnalysis);
+        (join.subQuery as any).disabledAnalysis = false;
+        currentOffset += subQueryBuilt.values.length;
+        parametersToAdd.push(...subQueryBuilt.values);
+        const onClause = 
+          typeof join.on === 'string' ? join.on
+          : (() => {
+              join.on.disableWhere();
+              join.on.addOffset(currentOffset);
+              const stmt = join.on.build(false);
+              currentOffset += stmt.values.length;
+              parametersToAdd.push(...stmt.values);
+              return stmt.statement;
+            })();
+        subQueryBuilt.text = this.spaceLines(subQueryBuilt.text, 1);
+        joinClauses += 
+          `${joinClauses ? '\n' : ''}${join.type.toUpperCase()} JOIN (\n${subQueryBuilt.text}\n) ${join.alias}\n ON ${onClause}`;
+      }
     }
 
     this.whereStatement.addParams(parametersToAdd);
