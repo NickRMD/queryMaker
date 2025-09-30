@@ -86,6 +86,10 @@ class Query {
     return new Cte();
   }
 
+  /**
+    * Initiates a new UNION query.
+    * @returns A new Union instance with a build method that respects the deepAnalysisDefault setting.
+    */
   public get union(): Union {
     const unionQuery = new Union();
     (unionQuery as any).flavor = this.flavor;
@@ -145,6 +149,10 @@ class Query {
     return new Cte();
   }
 
+  /**
+    * Initiates a new UNION query.
+    * @returns A new Union instance.
+    */
   public static get union(): Union {
     return new Union();
   }
