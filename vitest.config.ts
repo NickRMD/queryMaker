@@ -12,7 +12,7 @@ export default defineConfig({
         '**/*.spec.ts',
         'vitest.config.ts',
         '**/getOptionalPackages.ts',
-        'src/index.ts',
+        '**/index.ts',
       ],
       include: ['src/**/*.ts']
     },
