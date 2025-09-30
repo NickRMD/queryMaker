@@ -462,4 +462,29 @@ describe("Union Query", () => {
     expect(unionQuery.values).toEqual(['value1', 'value2']);
   });
 
+  it('should throw if selects have different selected lengths', () => {
+    const select1 = Query.select
+      .from("table1")
+      .select(["column1", "column2"])
+      .where("column1 = ?", "value1");
+
+    const select2 = Query.select
+      .from("table2")
+      .select(["column1", "column2", "column3"])
+      .where("column2 = ?", "value2");
+
+    const union = new Union()
+      .addManyOfType([select1, select2], 'union all')
+      .as('union_table');
+
+    expect(() => union.build()).toThrowError('All SELECT queries must have the same number of fields. Query at index 1 differs.');
+    expect(() => union.rawUnion()).toThrowError('All SELECT queries must have the same number of fields. Query at index 1 differs.');
+
+    try {
+      union.build();
+    } catch (e: any) {
+      expect(e.cause?.selectQuery).toStrictEqual(select2);
+    }
+  });
+
 });
