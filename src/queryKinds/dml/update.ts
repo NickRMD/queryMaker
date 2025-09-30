@@ -4,15 +4,15 @@ import Statement from "../../statementMaker.js";
 import Join, { isJoinTable } from "../../types/Join.js";
 import QueryKind from "../../types/QueryKind.js";
 import SetValue from "../../types/SetValue.js";
-import QueryDefinition from "./query.js";
+import DmlQueryDefinition from "./query.js";
 
 /**
   * UpdateQuery class is used to build SQL UPDATE queries.
   * It provides methods to specify the table to update, set values, add joins, and define conditions.
   * The class supports Common Table Expressions (CTEs) and returning clauses.
-  * It extends the QueryDefinition class to inherit common query functionalities.
+  * It extends the DmlQueryDefinition class to inherit common query functionalities.
   */
-export default class UpdateQuery extends QueryDefinition {
+export default class UpdateQuery extends DmlQueryDefinition {
   /** The table to update. */
   private table: string;
   /** Optional alias for the table. */

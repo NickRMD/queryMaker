@@ -55,13 +55,13 @@ type SchemaType<S> =
   never;
 
 /**
-  * Abstract class QueryDefinition serves as a blueprint for different types of SQL query definitions.
+  * Abstract class DmlQueryDefinition serves as a blueprint for different types of SQL query definitions.
   * It defines the essential methods and properties that any concrete query class must implement.
   * This includes methods for building the SQL query, executing it, cloning the query definition,
   * resetting its state, and checking if the query is complete.
   * The class also provides a method to re-analyze the query for duplicate parameters to optimize parameter usage.
   */
-export default abstract class QueryDefinition<S = any> {
+export default abstract class DmlQueryDefinition<S = any> {
 
   /**
     * Converts the query definition to its SQL string representation.
@@ -87,7 +87,7 @@ export default abstract class QueryDefinition<S = any> {
   /**
     * Creates a deep copy of the current query definition.
     */
-  public abstract clone(): QueryDefinition;
+  public abstract clone(): DmlQueryDefinition;
 
   /**
     * Resets the query definition to its initial state.
@@ -129,9 +129,9 @@ export default abstract class QueryDefinition<S = any> {
 
   /**
     * Provides access to the current query definition instance.
-    * @returns The current QueryDefinition instance.
+    * @returns The current DmlQueryDefinition instance.
     */
-  public get query(): QueryDefinition {
+  public get query(): DmlQueryDefinition {
     return this;
   }
 
@@ -189,7 +189,7 @@ export default abstract class QueryDefinition<S = any> {
   /**
     * Sets the SQL flavor for escaping identifiers.
     * @param flavor The SQL flavor to set.
-    * @returns The current QueryDefinition instance for chaining.
+    * @returns The current DmlQueryDefinition instance for chaining.
     */
   public sqlFlavor(flavor: sqlFlavor) {
     this.flavor = flavor;
@@ -255,7 +255,7 @@ export default abstract class QueryDefinition<S = any> {
     */
   public validate<T extends { safeParse: any } | (new (...args: any[]) => any)>(
     schema: T
-  ): QueryDefinition<SchemaType<T>> {
+  ): DmlQueryDefinition<SchemaType<T>> {
     if ((schema as any).safeParse) {
       this.isZodSchema = true;
     } else {
@@ -269,7 +269,7 @@ export default abstract class QueryDefinition<S = any> {
   /**
     * Configures options for class-validator validation.
     * @param config The configuration options for class-validator.
-    * @returns The current QueryDefinition instance for method chaining.
+    * @returns The current DmlQueryDefinition instance for method chaining.
     */
   public classValidatorConfig(
     config: ValidatorOptions
@@ -403,12 +403,12 @@ export default abstract class QueryDefinition<S = any> {
     values: any[],
     useDeepEqual: boolean = false
   ): { text: string; values: any[] } {
-    return QueryDefinition.reAnalyzeParsedQueryForDuplicateParams(query, values, useDeepEqual);
+    return DmlQueryDefinition.reAnalyzeParsedQueryForDuplicateParams(query, values, useDeepEqual);
   }
 
   /**
     * Static method to re-analyze a parsed SQL query for duplicate parameters.
-    * This method can be used independently of any instance of QueryDefinition.
+    * This method can be used independently of any instance of DmlQueryDefinition.
     */
   public static reAnalyzeParsedQueryForDuplicateParams(
     query: string,

@@ -1,7 +1,7 @@
 import Statement from "../../statementMaker.js";
 import QueryKind from "../../types/QueryKind.js";
 import OrderBy from "../../types/OrderBy.js";
-import QueryDefinition from "./query.js";
+import DmlQueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 import SqlEscaper from "../../sqlEscaper.js";
 
@@ -42,7 +42,7 @@ export type SelectQueryWithUnionType = {
   * It supports adding queries with different union types (UNION or UNION ALL)
   * and can optionally assign an alias to the resulting union query.
   */
-export default class Union extends QueryDefinition {
+export default class Union extends DmlQueryDefinition {
 
   private selectFields: string[] = [];
 

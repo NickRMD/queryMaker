@@ -4,7 +4,7 @@ import Statement from "../../statementMaker.js";
 import Join, { isJoinTable } from "../../types/Join.js";
 import QueryKind from "../../types/QueryKind.js";
 import OrderBy, { isOrderByField } from "../../types/OrderBy.js";
-import QueryDefinition from "./query.js";
+import DmlQueryDefinition from "./query.js";
 import Union from "./union.js";
 
 /**
@@ -12,7 +12,7 @@ import Union from "./union.js";
   * It includes methods to build various parts of the query such as SELECT fields, WHERE conditions, JOINs, ORDER BY, LIMIT, OFFSET, GROUP BY, and CTEs.
   * The class provides functionality to build the final SQL query string and manage query parameters.
   */
-export default class SelectQuery extends QueryDefinition {
+export default class SelectQuery extends DmlQueryDefinition {
   /**
     * The table to select from.
     */

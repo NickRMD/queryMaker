@@ -2,7 +2,7 @@ import CteMaker, { Cte } from "../../cteMaker.js";
 import SqlEscaper from "../../sqlEscaper.js";
 import ColumnValue from "../../types/ColumnValue.js";
 import QueryKind from "../../types/QueryKind.js";
-import QueryDefinition from "./query.js";
+import DmlQueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
 
 /**
@@ -10,7 +10,7 @@ import SelectQuery from "./select.js";
   * It supports inserting values directly or from a SELECT query.
   * It also supports Common Table Expressions (CTEs) and RETURNING clauses.
   */
-export default class InsertQuery extends QueryDefinition {
+export default class InsertQuery extends DmlQueryDefinition {
   /** The table into which records will be inserted. */
   private table: string;
   /** The column-value pairs to be inserted. */
