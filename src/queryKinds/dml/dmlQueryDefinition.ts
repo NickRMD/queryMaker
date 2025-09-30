@@ -135,6 +135,13 @@ export default abstract class DmlQueryDefinition<S = any> {
     return this;
   }
 
+  /**
+    * Utility method to add spaces to each line of a given string.
+    * This is useful for formatting SQL queries for better readability.
+    * @param str The string to format.
+    * @param spaces The number of spaces to add to the beginning of each line (default is 0).
+    * @returns The formatted string with added spaces.
+    */
   protected spaceLines(str: string, spaces: number = 0): string {
     const space = ' '.repeat(spaces);
     return str.split('\n').map(line => space + line).join('\n');
