@@ -1,9 +1,9 @@
-import Statement from "../statementMaker.js";
-import QueryKind from "../types/QueryKind.js";
-import OrderBy from "../types/OrderBy.js";
+import Statement from "../../statementMaker.js";
+import QueryKind from "../../types/QueryKind.js";
+import OrderBy from "../../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 import SelectQuery from "./select.js";
-import SqlEscaper from "../sqlEscaper.js";
+import SqlEscaper from "../../sqlEscaper.js";
 
 /** Allowed types for UnionType */
 export const UnionTypes = {

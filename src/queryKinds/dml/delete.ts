@@ -1,8 +1,8 @@
-import CteMaker, { Cte } from "../cteMaker.js";
-import SqlEscaper from "../sqlEscaper.js";
-import Statement from "../statementMaker.js";
-import QueryKind from "../types/QueryKind.js";
-import UsingTable from "../types/UsingTable.js";
+import CteMaker, { Cte } from "../../cteMaker.js";
+import SqlEscaper from "../../sqlEscaper.js";
+import Statement from "../../statementMaker.js";
+import QueryKind from "../../types/QueryKind.js";
+import UsingTable from "../../types/UsingTable.js";
 import QueryDefinition from "./query.js";
 
 /**

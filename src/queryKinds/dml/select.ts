@@ -1,9 +1,9 @@
-import CteMaker, { Cte } from "../cteMaker.js";
-import SqlEscaper from "../sqlEscaper.js";
-import Statement from "../statementMaker.js";
-import Join, { isJoinTable } from "../types/Join.js";
-import QueryKind from "../types/QueryKind.js";
-import OrderBy, { isOrderByField } from "../types/OrderBy.js";
+import CteMaker, { Cte } from "../../cteMaker.js";
+import SqlEscaper from "../../sqlEscaper.js";
+import Statement from "../../statementMaker.js";
+import Join, { isJoinTable } from "../../types/Join.js";
+import QueryKind from "../../types/QueryKind.js";
+import OrderBy, { isOrderByField } from "../../types/OrderBy.js";
 import QueryDefinition from "./query.js";
 import Union from "./union.js";
 

@@ -1,5 +1,5 @@
-import QueryDefinition from "./queryKinds/query.js";
-import SelectQuery from "./queryKinds/select.js";
+import QueryDefinition from "./queryKinds/dml/query.js";
+import SelectQuery from "./queryKinds/dml/select.js";
 
 /**
   * Cte represents a Common Table Expression (CTE) in SQL.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import Union from "./union.js";
-import Query from "../queryMaker.js";
-import Statement from "../statementMaker.js";
+import Query from "../../queryMaker.js";
+import Statement from "../../statementMaker.js";
 
 describe("Union Query", () => {
   it('should create a UNION query with two SELECT statements', () => {

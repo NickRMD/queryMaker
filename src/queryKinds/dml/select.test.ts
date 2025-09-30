@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import SelectQuery from "./select.js";
-import Statement from "../statementMaker.js";
-import CteMaker, { Cte } from "../cteMaker.js";
+import Statement from "../../statementMaker.js";
+import CteMaker, { Cte } from "../../cteMaker.js";
 
 describe('Select Query', () => {
   it('should generate correct SELECT SQL', () => {

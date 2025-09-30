@@ -1,9 +1,9 @@
 import { Cte } from "./cteMaker.js";
-import DeleteQuery from "./queryKinds/delete.js";
-import InsertQuery from "./queryKinds/insert.js";
-import SelectQuery from "./queryKinds/select.js";
-import Union from "./queryKinds/union.js";
-import UpdateQuery from "./queryKinds/update.js";
+import DeleteQuery from "./queryKinds/dml/delete.js";
+import InsertQuery from "./queryKinds/dml/insert.js";
+import SelectQuery from "./queryKinds/dml/select.js";
+import Union from "./queryKinds/dml/union.js";
+import UpdateQuery from "./queryKinds/dml/update.js";
 import Statement from "./statementMaker.js";
 import sqlFlavor from "./types/sqlFlavor.js";
 

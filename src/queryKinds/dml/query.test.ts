@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import SelectQuery from "./select.js";
-import sqlFlavor from "../types/sqlFlavor.js";
+import sqlFlavor from "../../types/sqlFlavor.js";
 import UpdateQuery from "./update.js";
 import InsertQuery from "./insert.js";
 import DeleteQuery from "./delete.js";

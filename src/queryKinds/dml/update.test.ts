@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import UpdateQuery from "./update.js";
-import Statement from "../statementMaker.js";
-import CteMaker, { Cte } from "../cteMaker.js";
+import Statement from "../../statementMaker.js";
+import CteMaker, { Cte } from "../../cteMaker.js";
 import SelectQuery from "./select.js";
 
 describe('Update Query', () => {
