@@ -183,11 +183,9 @@ export default class SelectQuery extends QueryDefinition {
     */
   public select(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      this.selectFields = 
-        SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
+      this.rawSelect(SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
-      this.selectFields = 
-        SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
+      this.rawSelect(SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
     }
     return this;
   }
@@ -230,13 +228,9 @@ export default class SelectQuery extends QueryDefinition {
     */
   public addSelect(fields: string | string[]): this {
     if (Array.isArray(fields)) {
-      const escaped = 
-        SqlEscaper.escapeSelectIdentifiers(fields, this.flavor);
-      this.selectFields.push(...escaped);
+      this.addRawSelect(SqlEscaper.escapeSelectIdentifiers(fields, this.flavor));
     } else {
-      const escaped = 
-        SqlEscaper.escapeSelectIdentifiers([fields], this.flavor);
-      this.selectFields.push(...escaped);
+      this.addRawSelect(SqlEscaper.escapeSelectIdentifiers([fields], this.flavor));
     }
     return this;
   }
