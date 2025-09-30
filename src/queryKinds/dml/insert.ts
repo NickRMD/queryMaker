@@ -2,7 +2,7 @@ import CteMaker, { Cte } from "../../cteMaker.js";
 import SqlEscaper from "../../sqlEscaper.js";
 import ColumnValue from "../../types/ColumnValue.js";
 import QueryKind from "../../types/QueryKind.js";
-import DmlQueryDefinition from "./query.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 import SelectQuery from "./select.js";
 
 /**

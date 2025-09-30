@@ -1,7 +1,7 @@
 import Statement from "../../statementMaker.js";
 import QueryKind from "../../types/QueryKind.js";
 import OrderBy from "../../types/OrderBy.js";
-import DmlQueryDefinition from "./query.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 import SelectQuery from "./select.js";
 import SqlEscaper from "../../sqlEscaper.js";
 

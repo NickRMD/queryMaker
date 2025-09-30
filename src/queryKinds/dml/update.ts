@@ -4,7 +4,7 @@ import Statement from "../../statementMaker.js";
 import Join, { isJoinTable } from "../../types/Join.js";
 import QueryKind from "../../types/QueryKind.js";
 import SetValue from "../../types/SetValue.js";
-import DmlQueryDefinition from "./query.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 
 /**
   * UpdateQuery class is used to build SQL UPDATE queries.

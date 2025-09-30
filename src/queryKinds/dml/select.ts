@@ -4,7 +4,7 @@ import Statement from "../../statementMaker.js";
 import Join, { isJoinTable } from "../../types/Join.js";
 import QueryKind from "../../types/QueryKind.js";
 import OrderBy, { isOrderByField } from "../../types/OrderBy.js";
-import DmlQueryDefinition from "./query.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 import Union from "./union.js";
 
 /**

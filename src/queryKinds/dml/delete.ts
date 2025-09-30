@@ -3,7 +3,7 @@ import SqlEscaper from "../../sqlEscaper.js";
 import Statement from "../../statementMaker.js";
 import QueryKind from "../../types/QueryKind.js";
 import UsingTable from "../../types/UsingTable.js";
-import DmlQueryDefinition from "./query.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 
 /**
   * DeleteQuery class represents a SQL DELETE query.
