@@ -414,8 +414,6 @@ describe("Union Query", () => {
       .groupBy('column1')
       .build();
 
-    console.log(unionQuery.text);
-
     expect(unionQuery.text).toBe('SELECT\n "column1",\n "column2",\n COUNT(column2) AS count_column2\n FROM (\n (SELECT\n  "column1",\n  "column2"\n FROM "table1"\n WHERE (column1 = $1))\n\n UNION ALL\n\n (SELECT\n  "column1",\n  "column2"\n FROM "table2"\n WHERE (column2 = $2))\n) AS union_table\nGROUP BY "column1"');
     expect(unionQuery.values).toEqual(['value1', 'value2']);
   });
