@@ -1,4 +1,4 @@
-import QueryDefinition from "./queryKinds/dml/query.js";
+import QueryDefinition from "./queryKinds/dml/dmlQueryDefinition.js";
 import SelectQuery from "./queryKinds/dml/select.js";
 
 /**
