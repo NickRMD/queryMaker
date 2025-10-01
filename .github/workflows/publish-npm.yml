@@ -25,14 +25,32 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
 
       - name: Build project
-        run: npm run build:prod
+        run: pnpm build:prod
 
       - name: Determine version and tag
         id: version
@@ -77,11 +95,19 @@ jobs:
 
       - name: Update package version
         run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+          pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Create distribution archive
+        run: |
+          # Create a compressed archive of the dist directory
+          tar -czf dist-${{ steps.version.outputs.version }}.tar.gz dist/
+          
+          # Create a zip archive as well for Windows users
+          zip -r dist-${{ steps.version.outputs.version }}.zip dist/
 
       - name: Publish to NPM
         run: |
-          npm publish --tag ${{ steps.version.outputs.npm_tag }}
+          pnpm publish --tag ${{ steps.version.outputs.npm_tag }} --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -92,6 +118,9 @@ jobs:
           tag: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           commit: ${{ github.sha }}
+          artifacts: |
+            dist-${{ steps.version.outputs.version }}.tar.gz
+            dist-${{ steps.version.outputs.version }}.zip
           body: |
             ## Changes
             
@@ -101,6 +130,10 @@ jobs:
             ```bash
             npm install sqm@latest
             ```
+
+            Download the distribution archives:
+            - dist-${{ steps.version.outputs.version }}.tar.gz `compressed tar.gz archive`
+            - dist-${{ steps.version.outputs.version }}.zip `zip archive`
 
             For full changelog, see the commit history.
           draft: false
@@ -114,6 +147,9 @@ jobs:
           tag: v${{ steps.version.outputs.version }}
           name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
           commit: ${{ github.sha }}
+          artifacts: |
+            dist-${{ steps.version.outputs.version }}.tar.gz
+            dist-${{ steps.version.outputs.version }}.zip
           body: |
             ## ${{ steps.version.outputs.branch }} Release
 
@@ -123,6 +159,10 @@ jobs:
             ```bash
             npm install sqm@${{ steps.version.outputs.npm_tag }}
             ```
+
+            Download the distribution archives:
+            - dist-${{ steps.version.outputs.version }}.tar.gz `compressed tar.gz archive`
+            - dist-${{ steps.version.outputs.version }}.zip `zip archive`
 
             **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
           draft: false
