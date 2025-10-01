@@ -99,7 +99,7 @@ jobs:
 
       - name: Publish to NPM
         run: |
-          pnpm publish --tag ${{ steps.version.outputs.npm_tag }}
+          pnpm publish --tag ${{ steps.version.outputs.npm_tag }} --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
