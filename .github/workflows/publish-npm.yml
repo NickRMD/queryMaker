@@ -97,6 +97,14 @@ jobs:
         run: |
           pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
 
+      - name: Create distribution archive
+        run: |
+          # Create a compressed archive of the dist directory
+          tar -czf dist-${{ steps.version.outputs.version }}.tar.gz dist/
+          
+          # Create a zip archive as well for Windows users
+          zip -r dist-${{ steps.version.outputs.version }}.zip dist/
+
       - name: Publish to NPM
         run: |
           pnpm publish --tag ${{ steps.version.outputs.npm_tag }} --no-git-checks
@@ -110,6 +118,9 @@ jobs:
           tag: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           commit: ${{ github.sha }}
+          artifacts: |
+            dist-${{ steps.version.outputs.version }}.tar.gz
+            dist-${{ steps.version.outputs.version }}.zip
           body: |
             ## Changes
             
@@ -119,6 +130,10 @@ jobs:
             ```bash
             npm install sqm@latest
             ```
+
+            Download the distribution archives:
+            - dist-${{ steps.version.outputs.version }}.tar.gz `compressed tar.gz archive`
+            - dist-${{ steps.version.outputs.version }}.zip `zip archive`
 
             For full changelog, see the commit history.
           draft: false
@@ -132,6 +147,9 @@ jobs:
           tag: v${{ steps.version.outputs.version }}
           name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
           commit: ${{ github.sha }}
+          artifacts: |
+            dist-${{ steps.version.outputs.version }}.tar.gz
+            dist-${{ steps.version.outputs.version }}.zip
           body: |
             ## ${{ steps.version.outputs.branch }} Release
 
@@ -141,6 +159,10 @@ jobs:
             ```bash
             npm install sqm@${{ steps.version.outputs.npm_tag }}
             ```
+
+            Download the distribution archives:
+            - dist-${{ steps.version.outputs.version }}.tar.gz `compressed tar.gz archive`
+            - dist-${{ steps.version.outputs.version }}.zip `zip archive`
 
             **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
           draft: false
