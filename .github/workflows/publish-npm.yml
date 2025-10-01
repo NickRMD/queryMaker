@@ -6,7 +6,7 @@ on:
       - main
       - rc
       - beta
-      - dev
+      - next 
   workflow_dispatch:
 
 jobs:
@@ -64,7 +64,7 @@ jobs:
               NPM_TAG="latest"
               VERSION=$PACKAGE_VERSION
               ;;
-            "rc"|"beta"|"dev")
+            "rc"|"beta"|"next")
               IDENTIFIER=$BRANCH_NAME
               NPM_TAG=$BRANCH_NAME
 
@@ -140,7 +140,7 @@ jobs:
           prerelease: false
           generateReleaseNotes: true
 
-      - name: Create Pre-release (rc, beta, dev branches)
+      - name: Create Pre-release (rc, beta, next branches)
         if: github.ref != 'refs/heads/main'
         uses: ncipollo/release-action@v1
         with:
