@@ -11,3 +11,6 @@ export * from './sqlFlavor.js';
 export { default as sqlFlavor } from './sqlFlavor.js';
 export * from './UsingTable.js';
 export type { default as UsingTable } from './UsingTable.js';
+export * from './Column.js';
+export { default as Column } from './Column.js';
+export * from './ColumnTypes.js';
