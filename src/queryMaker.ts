@@ -1,4 +1,5 @@
 import { Cte } from "./cteMaker.js";
+import { Table } from "./queryKinds/ddl/index.js";
 import DeleteQuery from "./queryKinds/dml/delete.js";
 import InsertQuery from "./queryKinds/dml/insert.js";
 import SelectQuery from "./queryKinds/dml/select.js";
@@ -100,6 +101,16 @@ class Query {
   }
 
   /**
+    * Initiates a new Statement instance for building complex SQL statements.
+    * This can be used to create WHERE clauses, JOIN conditions, etc.
+    * @returns A new Statement instance.
+    */
+  public get table() {
+    const table = new Table(this.deepAnalysisDefault, this.flavor);
+    return table;
+  }
+
+  /**
     * Initiates a new SELECT query.
     * @returns A new SelectQuery instance.
     */
@@ -155,6 +166,15 @@ class Query {
     */
   public static get union(): Union {
     return new Union();
+  }
+
+  /**
+    * Initiates a new Table instance for DDL operations.
+    * This can be used to create tables and other DDL statements.
+    * @returns A new Table instance.
+    */
+  public static get table() {
+    return new Table();
   }
 
 }
