@@ -1,7 +1,6 @@
 import sqlFlavor from '../../types/sqlFlavor.js';
 import * as tables from './table/index.js';
 
-export * as table from './table/index.js';
 export * from './ddlQueryDefinition.js';
 export { default as DdlQueryDefinition } from './ddlQueryDefinition.js';
 
