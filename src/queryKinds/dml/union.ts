@@ -1,9 +1,9 @@
-import Statement from "../statementMaker.js";
-import QueryKind from "../types/QueryKind.js";
-import OrderBy from "../types/OrderBy.js";
-import QueryDefinition from "./query.js";
+import Statement from "../../statementMaker.js";
+import QueryKind from "../../types/QueryKind.js";
+import OrderBy from "../../types/OrderBy.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 import SelectQuery from "./select.js";
-import SqlEscaper from "../sqlEscaper.js";
+import SqlEscaper from "../../sqlEscaper.js";
 
 /** Allowed types for UnionType */
 export const UnionTypes = {
@@ -42,8 +42,8 @@ export type SelectQueryWithUnionType = {
   * It supports adding queries with different union types (UNION or UNION ALL)
   * and can optionally assign an alias to the resulting union query.
   */
-export default class Union extends QueryDefinition {
-
+export default class Union extends DmlQueryDefinition {
+  /** The selected fields for the union query */
   private selectFields: string[] = [];
 
   /** Needed alias for the union query */
@@ -68,13 +68,48 @@ export default class Union extends QueryDefinition {
   private havingStatement: Statement | null = null;
 
   /**
+    * Checks if all added SELECT queries have the same number of fields.
+    * This is important for ensuring that the UNION operation is valid.
+    * @returns True if all SELECT queries have the same number of fields, 
+    * or the index of the first query that differs in field count.
+    */
+  private allSelectsHaveSameNumberOfFields(): number | null {
+    if (this.selectQueries.length === 0) return null;
+
+    const selects = this.selectQueries.map(sq => sq.query);
+
+    const firstSelectFieldCount = selects[0]?.columns.length || 0;
+
+    let indexThatDiffers: number | null = null;
+    const result = selects.every((select, i) => {
+      if (select.columns.length !== firstSelectFieldCount) {
+        indexThatDiffers = i;
+        return false;
+      } else return true;
+    });
+
+    return result ? null : indexThatDiffers;
+  }
+
+  /**
     * Make the union without selecting from it
     * Useful when the raw union is needed as a subquery
+    * @throws Error if no SELECT queries have been added to the union
+    * @throws Error if the SELECT queries do not have the same number of fields
     * @returns An object containing the raw SQL text of the union and its parameter values.
     */
   public rawUnion(): { text: string; values: any[] } {
     if (this.selectQueries.length === 0) {
       throw new Error('No SELECT queries added to the UNION.');
+    }
+    
+    const differingIndex = this.allSelectsHaveSameNumberOfFields();
+    if (differingIndex !== null) {
+      console.log('This is erroring out')
+      throw new Error(
+        `All SELECT queries must have the same number of fields. Query at index ${differingIndex} differs.`,
+        { cause: { selectQuery: this.selectQueries[differingIndex]?.query } }
+      );
     }
 
     let unionItself: string = '';
@@ -377,6 +412,15 @@ export default class Union extends QueryDefinition {
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
     if (this.selectQueries.length === 0) {
       throw new Error('No SELECT queries added to the UNION.');
+    }
+
+    const differingIndex = this.allSelectsHaveSameNumberOfFields();
+    if (differingIndex !== null) {
+      console.log('This is erroring out')
+      throw new Error(
+        `All SELECT queries must have the same number of fields. Query at index ${differingIndex} differs.`,
+        { cause: { selectQuery: this.selectQueries[differingIndex]?.query } }
+      );
     }
 
     let unionItself: string = '';

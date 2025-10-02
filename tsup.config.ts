@@ -1,7 +1,12 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: [
+    'src/index.ts', 
+    'src/types/index.ts',
+    'src/queryKinds/dml/index.ts',
+    'src/queryKinds/ddl/index.ts'
+  ],
   target: ['esnext', 'node21'],
   format: ['cjs', 'esm'],
   ignoreWatch: ['**/*.test.ts', '**/*.spec.ts'],

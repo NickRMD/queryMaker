@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import DeleteQuery from "./delete.js";
-import Statement from "../statementMaker.js";
-import { Cte } from "../cteMaker.js";
+import Statement from "../../statementMaker.js";
+import { Cte } from "../../cteMaker.js";
 import SelectQuery from "./select.js";
 
 describe('Delete Query', () => {

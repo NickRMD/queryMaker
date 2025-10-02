@@ -1,9 +1,9 @@
-import CteMaker, { Cte } from "../cteMaker.js";
-import SqlEscaper from "../sqlEscaper.js";
-import Statement from "../statementMaker.js";
-import QueryKind from "../types/QueryKind.js";
-import UsingTable from "../types/UsingTable.js";
-import QueryDefinition from "./query.js";
+import CteMaker, { Cte } from "../../cteMaker.js";
+import SqlEscaper from "../../sqlEscaper.js";
+import Statement from "../../statementMaker.js";
+import QueryKind from "../../types/QueryKind.js";
+import UsingTable from "../../types/UsingTable.js";
+import DmlQueryDefinition from "./dmlQueryDefinition.js";
 
 /**
   * DeleteQuery class represents a SQL DELETE query.
@@ -11,7 +11,7 @@ import QueryDefinition from "./query.js";
   * adding USING clauses, WHERE conditions, RETURNING fields, and Common Table Expressions (CTEs).
   * The class supports cloning, resetting, and building the final SQL query string with parameters.
   */
-export default class DeleteQuery extends QueryDefinition {
+export default class DeleteQuery extends DmlQueryDefinition {
   /** The table from which records will be deleted. */
   private deletingFrom: string;
   /** An optional alias for the table being deleted from. */

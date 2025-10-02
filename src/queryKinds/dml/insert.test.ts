@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import InsertQuery from "./insert.js";
 import SelectQuery from "./select.js";
-import { Cte } from "../cteMaker.js";
+import { Cte } from "../../cteMaker.js";
 
 describe('Insert Query', () => {
   

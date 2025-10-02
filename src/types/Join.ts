@@ -1,4 +1,4 @@
-import SelectQuery from "../queryKinds/select.js";
+import SelectQuery from "../queryKinds/dml/select.js";
 import Statement from "../statementMaker.js";
 
 type joinTypeBase = 'INNER' | 'LEFT' | 'RIGHT' | 'FULL';

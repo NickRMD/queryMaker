@@ -1,9 +1,10 @@
 import { Cte } from "./cteMaker.js";
-import DeleteQuery from "./queryKinds/delete.js";
-import InsertQuery from "./queryKinds/insert.js";
-import SelectQuery from "./queryKinds/select.js";
-import Union from "./queryKinds/union.js";
-import UpdateQuery from "./queryKinds/update.js";
+import { Table } from "./queryKinds/ddl/index.js";
+import DeleteQuery from "./queryKinds/dml/delete.js";
+import InsertQuery from "./queryKinds/dml/insert.js";
+import SelectQuery from "./queryKinds/dml/select.js";
+import Union from "./queryKinds/dml/union.js";
+import UpdateQuery from "./queryKinds/dml/update.js";
 import Statement from "./statementMaker.js";
 import sqlFlavor from "./types/sqlFlavor.js";
 
@@ -86,6 +87,10 @@ class Query {
     return new Cte();
   }
 
+  /**
+    * Initiates a new UNION query.
+    * @returns A new Union instance with a build method that respects the deepAnalysisDefault setting.
+    */
   public get union(): Union {
     const unionQuery = new Union();
     (unionQuery as any).flavor = this.flavor;
@@ -93,6 +98,16 @@ class Query {
       return Union.prototype.build.call(unionQuery, deepAnalysis);
     }
     return unionQuery;
+  }
+
+  /**
+    * Initiates a new Statement instance for building complex SQL statements.
+    * This can be used to create WHERE clauses, JOIN conditions, etc.
+    * @returns A new Statement instance.
+    */
+  public get table() {
+    const table = new Table(this.deepAnalysisDefault, this.flavor);
+    return table;
   }
 
   /**
@@ -145,8 +160,21 @@ class Query {
     return new Cte();
   }
 
+  /**
+    * Initiates a new UNION query.
+    * @returns A new Union instance.
+    */
   public static get union(): Union {
     return new Union();
+  }
+
+  /**
+    * Initiates a new Table instance for DDL operations.
+    * This can be used to create tables and other DDL statements.
+    * @returns A new Table instance.
+    */
+  public static get table() {
+    return new Table();
   }
 
 }
