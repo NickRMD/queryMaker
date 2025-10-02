@@ -5,7 +5,8 @@ export default defineConfig({
     'src/index.ts', 
     'src/types/index.ts',
     'src/queryKinds/dml/index.ts',
-    'src/queryKinds/ddl/index.ts'
+    'src/queryKinds/ddl/index.ts',
+    'src/queryKinds/ddl/table/index.ts',
   ],
   target: ['esnext', 'node21'],
   format: ['cjs', 'esm'],

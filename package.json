@@ -9,6 +9,22 @@
     ".": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./types": {
+      "import": "./dist/types/index.mjs",
+      "require": "./dist/types/index.js"
+    },
+    "./ddl": {
+      "import": "./dist/queryKinds/ddl/index.mjs",
+      "require": "./dist/queryKinds/ddl/index.js"
+    },
+    "./dml": {
+      "import": "./dist/queryKinds/dml/index.mjs",
+      "require": "./dist/queryKinds/dml/index.js"
+    },
+    "./ddl/table": {
+      "import": "./dist/queryKinds/ddl/table/index.mjs",
+      "require": "./dist/queryKinds/ddl/table/index.js"
     }
   },
   "scripts": {
