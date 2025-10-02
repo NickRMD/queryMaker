@@ -1,4 +1,6 @@
+import SqlEscaper from "../../sqlEscaper.js";
 import QueryKind from "../../types/QueryKind";
+import sqlFlavor from "../../types/sqlFlavor.js";
 
 /**
   * An array of function names that can be used to execute SQL queries.
@@ -44,15 +46,15 @@ export default abstract class DdlQueryDefinition {
   protected tableName: string = '';
 
   /** The built DDL query string, initialized to null. */
-  protected builtQuery: string | null = null;
+  protected builtQuery: string | string[] | null = null;
 
   /**
     * Sets the name of the table for the DDL operation.
     * @param name - The name of the table.
     * @returns The current instance for method chaining.
     */
-  public table(name: string): this {
-    this.tableName = name;
+  public table(name: string | null = null): this {
+    this.tableName = name ? SqlEscaper.escapeTableName(name, this.flavor) : '';
     return this;
   }
 
@@ -70,7 +72,7 @@ export default abstract class DdlQueryDefinition {
     * @param deepAnalysis - Optional boolean to indicate if deep analysis is required (default is false).
     * @returns The constructed DDL query string.
     */
-  public abstract build(deepAnalysis?: boolean): string;
+  public abstract build(deepAnalysis?: boolean): string | string[];
 
   /**
     * Builds an EXPLAIN query for the DDL operation.
@@ -126,7 +128,7 @@ export default abstract class DdlQueryDefinition {
     * that represents the DDL operation defined by the instance.
     * @returns The SQL string representation of the DDL query.
     */
-  public abstract toSQL(): string;
+  public abstract toSQL(): string | string[];
 
   /**
     * Abstract getter to retrieve the kind of DDL query.
@@ -134,6 +136,53 @@ export default abstract class DdlQueryDefinition {
     * type of DDL operation (e.g., 'CREATE', 'ALTER', 'DROP').
     */
   public abstract get kind(): QueryKind;
+
+  /**
+    * The SQL flavor to use for escaping identifiers.
+    * Default is PostgreSQL.
+    */
+  protected flavor: sqlFlavor = sqlFlavor.postgres;
+
+  /**
+    * Schemas to be used in the query.
+    * This is useful for databases that support multiple schemas.
+    * NOTICE: SQL Injection is not checked in schema names. Be sure to use only trusted schema names.
+    */
+  protected schemas: string[] = [];
+
+  /**
+    * Sets the SQL flavor for escaping identifiers.
+    * @param flavor The SQL flavor to set.
+    * @returns The current DmlQueryDefinition instance for chaining.
+    */
+  public sqlFlavor(flavor: sqlFlavor) {
+    this.flavor = flavor;
+    return this;
+  }
+
+  /**
+    * Set schemas to be used in the query.
+    * This is useful for databases that support multiple schemas.
+    * NOTICE: SQL Injection is not checked in schema names. Be sure to use only trusted schema names.
+    * @param schemas The schemas to set.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public schema(...schemas: string[]): this {
+    this.schemas = schemas;
+    return this;
+  }
+
+  /**
+    * Adds schemas to the existing list of schemas.
+    * This is useful for databases that support multiple schemas.
+    * NOTICE: SQL Injection is not checked in schema names. Be sure to use only trusted schema names.
+    * @param schemas The schemas to add.
+    * @returns The current SelectQuery instance for chaining.
+    */
+  public addSchema(...schemas: string[]): this {
+    this.schemas.push(...schemas);
+    return this;
+  }
 
   /**
     * Executes the built SQL query using the provided query executor.
@@ -150,7 +199,13 @@ export default abstract class DdlQueryDefinition {
   ): Promise<void> {
     if (typeof queryExecutor === 'function') {
       const builtQuery = this.build();
-      await queryExecutor(builtQuery);
+      if (Array.isArray(builtQuery)) {
+        for (const query of builtQuery) {
+          await queryExecutor(query);
+        }
+      } else {
+        await queryExecutor(builtQuery);
+      }
       return;
     }
 
@@ -158,7 +213,13 @@ export default abstract class DdlQueryDefinition {
       for (const functionName of functionNames) {
         if (typeof queryExecutor.manager[functionName] === 'function') {
           const builtQuery = this.build();
-          await queryExecutor.manager[functionName]!(builtQuery);
+          if (Array.isArray(builtQuery)) {
+            for (const query of builtQuery) {
+              await queryExecutor.manager[functionName]!(query);
+            }
+          } else {
+            await queryExecutor.manager[functionName]!(builtQuery);
+          }
           return;
         }
       }
@@ -166,7 +227,13 @@ export default abstract class DdlQueryDefinition {
       for (const functionName of functionNames) {
         if (typeof queryExecutor[functionName] === 'function') {
           const builtQuery = this.build();
-          await queryExecutor[functionName]!(builtQuery);
+          if (Array.isArray(builtQuery)) {
+            for (const query of builtQuery) {
+              await queryExecutor[functionName]!(query);
+            }
+          } else {
+            await queryExecutor[functionName]!(builtQuery);
+          }
           return;
         }
       }
