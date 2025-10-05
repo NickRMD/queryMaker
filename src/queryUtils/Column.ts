@@ -1,4 +1,5 @@
-import { ColumnTypes } from "./ColumnTypes.js";
+import { ColumnTypes } from "../types/ColumnTypes.js";
+import ForeignKey, { Actions } from "../types/ForeignKey.js";
 
 /**
   * Class representing a column type.
@@ -87,6 +88,8 @@ export class ColumnDefinition {
   private defaultValue?: string;
   /** The check condition for the column, if any. */
   private checkCondition?: string;
+  /** Foreign key constraint details, if any. */
+  private foreignKey: ForeignKey | null = null;
 
   constructor(
     name: string | null = null,
@@ -187,6 +190,29 @@ export class ColumnDefinition {
   }
 
   /**
+    * Sets a foreign key constraint for the column.
+    * @param foreignTable - The name of the foreign table.
+    * @param foreignColumn - The name of the foreign column.
+    * @param onDeleteAction - Optional action to take on delete (e.g., CASCADE, SET NULL).
+    * @param onUpdateAction - Optional action to take on update (e.g., CASCADE, SET NULL).
+    * @returns The current instance for method chaining.
+    */
+  public references(
+    foreignTable: string,
+    foreignColumn: string,
+    onDeleteAction?: Actions,
+    onUpdateAction?: Actions
+  ): this {
+    this.foreignKey = {
+      table: foreignTable,
+      column: foreignColumn,
+      onDelete: onDeleteAction,
+      onUpdate: onUpdateAction
+    };
+    return this;
+  }
+
+  /**
     * Builds the string representation of the column definition.
     * @returns The string representation of the column definition.
     * @throws Error if the column name or type is not set.
@@ -224,6 +250,17 @@ export class ColumnDefinition {
       parts.push(`CHECK (${this.checkCondition})`);
     }
 
+    if (this.foreignKey) {
+      let fkPart = `REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})`;
+      if (this.foreignKey.onDelete) {
+        fkPart += ` ON DELETE ${this.foreignKey.onDelete}`;
+      }
+      if (this.foreignKey.onUpdate) {
+        fkPart += ` ON UPDATE ${this.foreignKey.onUpdate}`;
+      }
+      parts.push(fkPart);
+    }
+
     return parts.join(' ');
   }
 
@@ -244,6 +281,11 @@ export class ColumnDefinition {
     let addColumnUnique = this.isUnique
       ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_unique UNIQUE (${this.name})`
       : '';
+    let addForeignKey = this.foreignKey
+      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_fkey FOREIGN KEY (${this.name}) REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})` +
+        (this.foreignKey.onDelete ? ` ON DELETE ${this.foreignKey.onDelete}` : '') +
+        (this.foreignKey.onUpdate ? ` ON UPDATE ${this.foreignKey.onUpdate}` : '')
+      : '';
 
     let additions = [
       addColumn,
@@ -251,7 +293,8 @@ export class ColumnDefinition {
       addColumnDefault,
       addColumnCheck,
       addColumnPrimaryKey,
-      addColumnUnique
+      addColumnUnique,
+      addForeignKey
     ].filter(part => part !== '');
 
     return additions;
@@ -278,6 +321,11 @@ export class ColumnDefinition {
     let alterColumnUnique = this.isUnique
       ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_unique UNIQUE (${this.name})`
       : '';
+    let alterForeignKey = this.foreignKey
+      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_fkey FOREIGN KEY (${this.name}) REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})` +
+        (this.foreignKey.onDelete ? ` ON DELETE ${this.foreignKey.onDelete}` : '') +
+        (this.foreignKey.onUpdate ? ` ON UPDATE ${this.foreignKey.onUpdate}` : '')
+      : '';
 
     let alterations = [
       alterColumnName,
@@ -286,7 +334,8 @@ export class ColumnDefinition {
       alterColumnDefault,
       alterColumnCheck,
       alterColumnPrimaryKey,
-      alterColumnUnique
+      alterColumnUnique,
+      alterForeignKey
     ].filter(part => part !== '');
 
     return alterations;
@@ -303,6 +352,12 @@ export class ColumnDefinition {
 
 }
 
+/**
+  * Factory function to create a new ColumnDefinition instance.
+  * @param name - The name of the column (optional).
+  * @param type - The type of the column, either as a ColumnType instance or a string (optional).
+  * @returns A new ColumnDefinition instance.
+  */
 export default function Column(
   name: string | null = null,
   type: ColumnType | string | null = null

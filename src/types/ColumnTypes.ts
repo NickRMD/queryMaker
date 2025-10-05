@@ -1,4 +1,4 @@
-import { ColumnType } from "./Column.js";
+import { ColumnType } from "../queryUtils/Column.js";
 
 /**
   * Contain all the possible column types in PostgreSQL
