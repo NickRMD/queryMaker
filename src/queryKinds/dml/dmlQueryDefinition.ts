@@ -19,11 +19,19 @@ import SqlEscaper from "../../sqlEscaper.js";
 const functionNames = ['execute', 'query', 'run', 'all', 'get'] as const;
 
 /**
+  * FunctionDeclarationReturnType type defines the possible return types for functions that execute SQL queries.
+  * It can be an array of results, an object containing a rows property with the results,
+  * or a tuple containing an array of results and a number (e.g., for affected rows).
+  */
+type FunctionDeclarationReturnType<T> = T[] | { rows: T[] } | [T[], number];
+
+/**
   * FunctionDeclaration type defines the signature for functions that execute SQL queries.
   * It takes a query string and an array of parameters, and returns a promise that resolves
-  * to either an array of results or an object containing a rows property with the results.
+  * with a result of type FunctionDeclarationReturnType<T> or directly a result of that type.
   */
-type FunctionDeclaration<T> = (query: string, params: any[]) => Promise<T[] | { rows: T[] }>;
+type FunctionDeclaration<T> = 
+  (query: string, params: any[]) => Promise<FunctionDeclarationReturnType<T>> | FunctionDeclarationReturnType<T>;
 
 /**
   * QueryExecutorObject interface defines the structure for an object that can execute SQL queries.
@@ -41,7 +49,7 @@ interface QueryExecutorObject<T> {
 /**
   * QueryExecutor type can be either a QueryExecutorObject or a function that executes a query.
   */
-type QueryExecutor<T> = 
+export type QueryExecutor<T> = 
   QueryExecutorObject<T> 
   | FunctionDeclaration<T>;
 
@@ -53,6 +61,13 @@ type SchemaType<S> =
   S extends ZodObject ? z.infer<S> :
   S extends { new(): infer U } ? U :
   never;
+
+/**
+  * OmittingReturnFromValidate is a utility type that modifies the type T by omitting
+  * the methods 'execute', 'getOne', and 'getMany', and adding the DmlQueryDefinition with the inferred schema type.
+  */
+type ReturnFromValidate<This, Schema> = 
+  DmlQueryDefinition<SchemaType<Schema>> & This;
 
 /**
   * Abstract class DmlQueryDefinition serves as a blueprint for different types of SQL query definitions.
@@ -260,17 +275,17 @@ export default abstract class DmlQueryDefinition<S = any> {
     * @returns A promise that resolves if the schema is valid, or rejects with validation errors.
     * @throws An error if no validation library is available.
     */
-  public validate<T extends { safeParse: any } | (new (...args: any[]) => any)>(
-    schema: T
-  ): DmlQueryDefinition<SchemaType<T>> {
-    if ((schema as any).safeParse) {
+  public validate<
+    T extends { safeParse: Function } | (new (...args: any[]) => any)
+  >(schema: T): ReturnFromValidate<this, T> {
+    if ("safeParse" in schema) {
       this.isZodSchema = true;
     } else {
       this.isClassValidatorSchema = true;
     }
     this.validatorSchema = schema;
 
-    return this;
+    return this as ReturnFromValidate<this, T>;
   }
 
   /**
@@ -292,22 +307,46 @@ export default abstract class DmlQueryDefinition<S = any> {
     * @returns A promise that resolves if the data is valid, or rejects with validation errors.
     * @throws An error if no validation library is available.
     */
-  private async handleValidation(input: any) {
-    if (this.validatorSchema) {
-      if (this.isZodSchema) {
-        const zod = await getZod();
-        return await zod.array(this.validatorSchema).parseAsync(input);
-      } else if (this.isClassValidatorSchema) {
-        const { classValidator, classTransformer } = await getClassValidator();
-        const { validateOrReject } = classValidator;
-        const transformed = classTransformer.plainToInstance(this.validatorSchema, input);
-        for (const item of transformed) {
-          // Use class-validator to validate each item
-          await validateOrReject(item as any, this.classValidatorOptions);
-        }
+  private async handleValidation<T>(input: any): Promise<T[]> {
+    input = Array.isArray(input) ? input : [input];
 
-        return transformed;
+    input = input !== null
+      ? Array.isArray(input) && input.length === 2
+        && Array.isArray(input?.[0])
+        && typeof input?.[1] === 'number'
+        ? input[0] ?? null
+        : input ?? null
+      : input;
+
+    try {
+      if (this.validatorSchema) {
+        if (this.isZodSchema) {
+          const zod = await getZod();
+          input = await zod.array(this.validatorSchema).parseAsync(input);
+        } else if (this.isClassValidatorSchema) {
+          const { classValidator, classTransformer } = await getClassValidator();
+          const { validateOrReject } = classValidator;
+          input = classTransformer.plainToInstance(this.validatorSchema, input);
+          for (const item of input as any[]) {
+            // Use class-validator to validate each item
+            await validateOrReject(item as any, this.classValidatorOptions);
+          }
+        }
       }
+    } catch (error) {
+      console.group('Validation Error');
+      console.error('Error during validation:', error);
+      console.debug('Input data:', input);
+      console.debug('Validator schema:', this.validatorSchema);
+      console.groupEnd();
+
+      throw new Error('Validation failed. See console for details.', {
+        cause: {
+          originalError: error,
+          input,
+          schema: this.validatorSchema
+        }
+      });
     }
 
     return input;
@@ -339,11 +378,29 @@ export default abstract class DmlQueryDefinition<S = any> {
   ): Promise<T[]> {
     if (typeof queryExecutor === 'function') {
       const builtQuery = this.build();
-      const result = await queryExecutor(builtQuery.text, builtQuery.values);
-      if ((result as any)?.rows) {
-        return await this.handleValidation((result as any).rows);
+      let result = await queryExecutor(builtQuery.text, builtQuery.values);
+      if (
+        result === undefined 
+        || result === null
+      ) return [];
+
+      if (typeof result !== 'object') {
+        throw new Error('Invalid result from query executor function.');
+      }
+
+      if ("rows" in result) {
+        if (
+          result.rows === undefined 
+          || result.rows === null
+        ) return [];
+
+        if (typeof result.rows !== 'object') {
+          throw new Error('Invalid rows property in result from query executor function.');
+        }
+
+        return await this.handleValidation<T>(result.rows);
       } else {
-        return await this.handleValidation(result);
+        return await this.handleValidation<T>(result);
       }
     }
 
@@ -352,10 +409,28 @@ export default abstract class DmlQueryDefinition<S = any> {
         if (typeof queryExecutor.manager[functionName] === 'function') {
           const builtQuery = this.build();
           const result = await queryExecutor.manager[functionName]!(builtQuery.text, builtQuery.values);
-          if ((result as any)?.rows) {
-            return await this.handleValidation((result as any).rows);
+          if (
+            result === undefined 
+            || result === null
+          ) return [];
+
+          if (typeof result !== 'object') {
+            throw new Error('Invalid result from query executor manager function.');
+          }
+
+          if ("rows" in result) {
+            if (
+              result.rows === undefined 
+              || result.rows === null
+            ) return [];
+
+            if (typeof result.rows !== 'object') {
+              throw new Error('Invalid rows property in result from query executor manager function.');
+            }
+
+            return await this.handleValidation<T>(result.rows);
           } else {
-            return await this.handleValidation(result);
+            return await this.handleValidation<T>(result);
           }
         }
       }
@@ -364,16 +439,77 @@ export default abstract class DmlQueryDefinition<S = any> {
         if (typeof queryExecutor[functionName] === 'function') {
           const builtQuery = this.build();
           const result = await queryExecutor[functionName]!(builtQuery.text, builtQuery.values);
-          if ((result as any)?.rows) {
-            return await this.handleValidation((result as any).rows);
+          if (!result) return [];
+
+          if (typeof result !== 'object') {
+            throw new Error('Invalid result from query executor object function.');
+          }
+
+          if ("rows" in result) {
+            if (
+              result.rows === undefined 
+              || result.rows === null
+            ) return [];
+
+            if (typeof result.rows !== 'object') {
+              throw new Error('Invalid rows property in result from query executor manager function.');
+            }
+
+            return await this.handleValidation<T>(result.rows);
           } else {
-            return await this.handleValidation(result);
+            return await this.handleValidation<T>(result);
           }
         }
       }
     }
 
     throw new Error('Invalid query executor provided.');
+  }
+
+  /**
+    * Executes the built SQL query and returns a single result or null if no result is found.
+    * This method ensures that only one result is returned by applying a limit if necessary.
+    * @param queryExecutor The executor to run the SQL query.
+    * @param noManager If true, bypasses the manager property of the executor object.
+    * @returns A promise that resolves with a single result or null.
+    * @throws An error if the provided query executor is invalid or if validation fails.
+    */
+  public async getOne<T = S>(
+    queryExecutor: QueryExecutor<T>,
+    noManager: boolean = false
+  ): Promise<T | null> {
+    if (
+      "limit" in this
+      && typeof this['limit'] === 'function'
+      && this['limit'] instanceof Function
+      && this['limit'](1) !== this
+    ) {
+      this.limit(1);
+    }
+
+    const result = await (this.execute<T>(queryExecutor, noManager));
+
+    return result !== null
+      ? Array.isArray(result) && result.length === 2
+        && Array.isArray(result?.[0])
+        && typeof result?.[1] === 'number'
+        ? result[0][0] as T ?? null
+        : result[0] as T ?? null
+      : null;
+  }
+
+  /**
+    * Executes the built SQL query and returns multiple results.
+    * @param queryExecutor The executor to run the SQL query.
+    * @param noManager If true, bypasses the manager property of the executor object.
+    * @returns A promise that resolves with an array of results.
+    * @throws An error if the provided query executor is invalid or if validation fails.
+    */
+  public async getMany<T = S>(
+    queryExecutor: QueryExecutor<T>,
+    noManager: boolean = false
+  ): Promise<T[]> {
+    return (this.execute<T>(queryExecutor, noManager));
   }
 
   /**
