@@ -1,5 +1,5 @@
 import SqlEscaper from "../../../sqlEscaper.js";
-import { ColumnDefinition } from "../../../types/Column.js";
+import { ColumnDefinition } from "../../../queryUtils/Column.js";
 import QueryKind from "../../../types/QueryKind.js";
 import TableQueryDefinition from "./tableColumnDefinition.js";
 

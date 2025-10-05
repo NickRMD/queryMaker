@@ -1,5 +1,5 @@
 import SqlEscaper from "../../../sqlEscaper.js";
-import { ColumnDefinition } from "../../../types/Column.js";
+import { ColumnDefinition } from "../../../queryUtils/Column.js";
 import QueryKind from "../../../types/QueryKind.js";
 import TableQueryDefinition from "./tableColumnDefinition.js";
 
@@ -82,7 +82,9 @@ export default class CreateTableQuery extends TableQueryDefinition {
     * @returns A new instance of CreateTableQuery with the same properties as the current instance.
     */
   public clone(): CreateTableQuery {
-    const cloned = new CreateTableQuery(this.tableName ?? undefined, ...this.tableColumns);
+    const cloned = new CreateTableQuery();
+    cloned.tableName = this.tableName;
+    cloned.tableColumns = [...this.tableColumns];
     cloned.flavor = this.flavor;
     cloned.ifNotExistsFlag = this.ifNotExistsFlag;
     return cloned;
