@@ -4,6 +4,7 @@ export default defineConfig({
   entry: [
     'src/index.ts', 
     'src/types/index.ts',
+    'src/queryUtils/index.ts',
     'src/queryKinds/dml/index.ts',
     'src/queryKinds/ddl/index.ts',
     'src/queryKinds/ddl/table/index.ts',
