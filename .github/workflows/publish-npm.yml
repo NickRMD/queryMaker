@@ -131,6 +131,8 @@ jobs:
           artifacts: |
             dist-${{ steps.version.outputs.version }}.tar.gz
             dist-${{ steps.version.outputs.version }}.zip
+            dist-qjs-${{ steps.version.outputs.version }}.tar.gz
+            dist-qjs-${{ steps.version.outputs.version }}.zip
           body: |
             ## Changes
             
@@ -160,6 +162,8 @@ jobs:
           artifacts: |
             dist-${{ steps.version.outputs.version }}.tar.gz
             dist-${{ steps.version.outputs.version }}.zip
+            dist-qjs-${{ steps.version.outputs.version }}.tar.gz
+            dist-qjs-${{ steps.version.outputs.version }}.zip
           body: |
             ## ${{ steps.version.outputs.branch }} Release
 
