@@ -96,6 +96,7 @@ jobs:
       - name: Update package version
         run: |
           pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+          ./scripts/update-jsr-version.sh ${{ steps.version.outputs.version }}
 
       - name: Create distribution archive
         run: |
@@ -105,11 +106,20 @@ jobs:
           # Create a zip archive as well for Windows users
           zip -r dist-${{ steps.version.outputs.version }}.zip dist/
 
+          # Create a compressed archive of the dist-qjs directory
+          tar -czf dist-qjs-${{ steps.version.outputs.version }}.tar.gz dist-qjs/
+
+          # Create a zip archive of the dist-qjs directory for Windows users
+          zip -r dist-qjs-${{ steps.version.outputs.version }}.zip dist-qjs
+
       - name: Publish to NPM
         run: |
           pnpm publish --tag ${{ steps.version.outputs.npm_tag }} --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to JSR
+        run: pnpx jsr publish --allow-dirty
 
       - name: Create GitHub Release (main branch only)
         if: github.ref == 'refs/heads/main'
