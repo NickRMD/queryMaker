@@ -63,6 +63,13 @@ jobs:
             "main")
               NPM_TAG="latest"
               VERSION=$PACKAGE_VERSION
+
+              # Find the latest tag matching this package and error if it already exists
+              LAST_TAG=$(git tag --list "v${PACKAGE_VERSION}" | sort -V | tail -n1)
+              if [ "$LAST_TAG" == "v${PACKAGE_VERSION}" ]; then
+                echo "Version $PACKAGE_VERSION already exists. Please update the version in package.json and jsr.json before publishing."
+                exit 1
+              fi
               ;;
             "rc"|"beta"|"next")
               IDENTIFIER=$BRANCH_NAME
