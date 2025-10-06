@@ -10,6 +10,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
+    "./queryUtils": {
+      "import": "./dist/queryUtils/index.mjs",
+      "require": "./dist/queryUtils/index.js"
+    },
     "./types": {
       "import": "./dist/types/index.mjs",
       "require": "./dist/types/index.js"
@@ -37,10 +41,13 @@
     "dev:deno": "concurrently \"pnpm run build:dev\" \"pnpm run start:dev:deno\"",
     "dev:bun": "concurrently \"pnpm run build:dev\" \"pnpm run start:dev:bun\"",
     "start": "node dist/index.js",
-    "build:prod": "tsup --config tsup.config.ts",
+    "build:prod:everything": "tsup --config tsup.config.ts",
+    "build:prod:qjs": "tsup --config tsup.config.qjs.ts",
+    "build:prod": "concurrently \"pnpm run build:prod:everything\" \"pnpm run build:prod:qjs\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "publish:jsr:dry": "jsr publish --dry-run --allow-dirty"
   },
   "files": [
     "dist",
@@ -69,11 +76,13 @@
   "author": "Nicolas R. M. Dias <nicolasrenanmachado@gmail.com>",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@biomejs/biome": "^2.2.5",
     "@swc/core": "^1.13.5",
     "@vitest/coverage-v8": "^3.2.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "concurrently": "^9.2.1",
+    "jsr": "^0.13.5",
     "nodemon": "^3.1.10",
     "terser": "^5.44.0",
     "tslib": "^2.8.1",
@@ -82,9 +91,6 @@
     "vitest": "^3.2.4",
     "wait-on": "^9.0.1",
     "zod": "^4.1.11"
-  },
-  "dependencies": {
-    "ts-pattern": "^5.8.0"
   },
   "peerDependencies": {
     "class-transformer": ">=0.5.0",
