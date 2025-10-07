@@ -491,4 +491,15 @@ describe('Update Query', () => {
     expect(query.values).toEqual([true, 'active', 'Engineering', 'TechCorp']);
   });
 
+  it('should support returning all columns with returnAllFields', () => {
+    const query = new UpdateQuery('users')
+      .set({ name: 'Alice', age: 28 })
+      .returnAllFields()
+      .where('id = ?', 3)
+      .build();
+
+    expect(query.text).toBe('UPDATE "users"\nSET "name" = $1, "age" = $2\nWHERE (id = $3)\nRETURNING *');
+    expect(query.values).toEqual(['Alice', 28, 3]);
+  });
+
 });

@@ -291,4 +291,14 @@ describe('Delete Query', () => {
     expect(query.getParams()).toEqual([1]);
     expect(query.toSQL()).toBe('DELETE FROM "users" AS u\n WHERE (u.id = $1)\n RETURNING "id", "email", "biscuit"');
   });
+
+  it('should support returning all with returnAllFields', () => {
+    const query = new DeleteQuery('users', 'u')
+      .where('u.id = ?', 1)
+      .returnAllFields()
+      .build();
+
+    expect(query.text).toBe('DELETE FROM "users" AS u\n WHERE (u.id = $1)\n RETURNING *');
+    expect(query.values).toEqual([1]);
+  });
 });
