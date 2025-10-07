@@ -199,13 +199,9 @@ export default class AlterTableQuery extends TableQueryDefinition {
    * @returns The SQL string representation of the ALTER TABLE query.
    * @throws Error if the query has not been built yet.
    */
-  public toSQL(): string | string[] {
+  public toSQL(): string[] {
     if (this.builtQuery) this.build();
-    if (!this.builtQuery)
-      throw new Error(
-        "No built query available. Please build the query first.",
-      );
-    return this.builtQuery;
+    return this.builtQuery as string[];
   }
 
   /**
