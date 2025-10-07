@@ -129,25 +129,28 @@ export default class DeleteQuery extends DmlQueryDefinition {
   }
 
   /**
-    * Specifies that all fields should be returned after the delete operation.
-    * @returns The current DeleteQuery instance for method chaining.
-    */
+   * Specifies that all fields should be returned after the delete operation.
+   * @returns The current DeleteQuery instance for method chaining.
+   */
   public returnAllFields(): this {
     this.returnAll = true;
     this.returningFields = [];
     return this;
   }
 
-  /** 
-    * Specifies the fields to be returned after the delete operation. 
-    * Accepts a string or an array of strings.
-    * @param fields - The field(s) to be returned.
-    * @returns The current DeleteQuery instance for method chaining.
-    */
+  /**
+   * Specifies the fields to be returned after the delete operation.
+   * Accepts a string or an array of strings.
+   * @param fields - The field(s) to be returned.
+   * @returns The current DeleteQuery instance for method chaining.
+   */
   public returning(fields: string | string[]): this {
-    this.returningRaw(SqlEscaper.escapeSelectIdentifiers(
-      Array.isArray(fields) ? fields : [fields], this.flavor
-    ));
+    this.returningRaw(
+      SqlEscaper.escapeSelectIdentifiers(
+        Array.isArray(fields) ? fields : [fields],
+        this.flavor,
+      ),
+    );
     return this;
   }
 
@@ -158,18 +161,21 @@ export default class DeleteQuery extends DmlQueryDefinition {
    * @returns The current DeleteQuery instance for method chaining.
    */
   public addReturning(fields: string | string[]): this {
-    this.addReturningRaw(SqlEscaper.escapeSelectIdentifiers(
-      Array.isArray(fields) ? fields : [fields], this.flavor
-    ));
+    this.addReturningRaw(
+      SqlEscaper.escapeSelectIdentifiers(
+        Array.isArray(fields) ? fields : [fields],
+        this.flavor,
+      ),
+    );
     return this;
   }
 
   /**
-    * Specifies raw fields to be returned after the delete operation without any escaping.
-    * Accepts a string or an array of strings.
-    * @param fields - The raw field(s) to be returned.
-    * @returns The current DeleteQuery instance for method chaining.
-    */
+   * Specifies raw fields to be returned after the delete operation without any escaping.
+   * Accepts a string or an array of strings.
+   * @param fields - The raw field(s) to be returned.
+   * @returns The current DeleteQuery instance for method chaining.
+   */
   public returningRaw(fields: string | string[]): this {
     this.returnAll = false;
     if (Array.isArray(fields)) {
@@ -181,11 +187,11 @@ export default class DeleteQuery extends DmlQueryDefinition {
   }
 
   /**
-    * Adds raw fields to the existing RETURNING clause without any escaping.
-    * Accepts a string or an array of strings.
-    * @param field - The raw field(s) to be added to the RETURNING clause.
-    * @returns The current DeleteQuery instance for method chaining.
-    */
+   * Adds raw fields to the existing RETURNING clause without any escaping.
+   * Accepts a string or an array of strings.
+   * @param field - The raw field(s) to be added to the RETURNING clause.
+   * @returns The current DeleteQuery instance for method chaining.
+   */
   public addReturningRaw(field: string | string[]): this {
     this.returnAll = false;
     if (Array.isArray(field)) {
@@ -211,7 +217,7 @@ export default class DeleteQuery extends DmlQueryDefinition {
       ? this.whereStatement.clone()
       : null;
     cloned.returningFields = [...this.returningFields];
-    cloned.ctes = this.ctes ? new CteMaker(...this.ctes['ctes']) : null;
+    cloned.ctes = this.ctes ? new CteMaker(...this.ctes["ctes"]) : null;
     cloned.returnAll = this.returnAll;
     return cloned;
   }
@@ -308,9 +314,10 @@ export default class DeleteQuery extends DmlQueryDefinition {
       deleteClause,
       usingClause,
       whereClause,
-      returningClause || (this.returnAll ? 'RETURNING *' : '')
-    ].filter(part => part !== '')
-      .join('\n ');
+      returningClause || (this.returnAll ? "RETURNING *" : ""),
+    ]
+      .filter((part) => part !== "")
+      .join("\n ");
 
     this.builtQuery = SqlEscaper.appendSchemas(this.builtQuery, this.schemas);
 

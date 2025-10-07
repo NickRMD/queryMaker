@@ -206,10 +206,10 @@ export default class UpdateQuery extends DmlQueryDefinition {
   }
 
   /**
-    * Specifies that all fields should be returned after the update.
-    * This sets the RETURNING clause to '*'.
-    * @returns The current UpdateQuery instance for method chaining.
-    */
+   * Specifies that all fields should be returned after the update.
+   * This sets the RETURNING clause to '*'.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
   public returnAllFields(): this {
     this.returnAll = true;
     this.returningFields = [];
@@ -217,38 +217,44 @@ export default class UpdateQuery extends DmlQueryDefinition {
   }
 
   /**
-    * Specifies the RETURNING fields for the update.
-    * Accepts either a single field name or an array of field names.
-    * @param fields - The field(s) to be returned after the update.
-    * @returns The current UpdateQuery instance for method chaining.
-    */
+   * Specifies the RETURNING fields for the update.
+   * Accepts either a single field name or an array of field names.
+   * @param fields - The field(s) to be returned after the update.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
   public returning(fields: string | string[]): this {
-    this.returningRaw(SqlEscaper.escapeSelectIdentifiers(
-      Array.isArray(fields) ? fields : [fields], this.flavor
-    ));
+    this.returningRaw(
+      SqlEscaper.escapeSelectIdentifiers(
+        Array.isArray(fields) ? fields : [fields],
+        this.flavor,
+      ),
+    );
     return this;
   }
 
   /**
-    * Adds additional RETURNING fields to the update.
-    * Accepts either a single field name or an array of field names.
-    * @param field - The field(s) to be added to the RETURNING clause.
-    * @returns The current UpdateQuery instance for method chaining.
-    */
+   * Adds additional RETURNING fields to the update.
+   * Accepts either a single field name or an array of field names.
+   * @param field - The field(s) to be added to the RETURNING clause.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
   public addReturning(fields: string | string[]): this {
-    this.addReturningRaw(SqlEscaper.escapeSelectIdentifiers(
-      Array.isArray(fields) ? fields : [fields], this.flavor
-    ));
+    this.addReturningRaw(
+      SqlEscaper.escapeSelectIdentifiers(
+        Array.isArray(fields) ? fields : [fields],
+        this.flavor,
+      ),
+    );
     return this;
   }
 
   /**
-    * Specifies raw RETURNING fields for the update without escaping.
-    * Accepts either a single raw field string or an array of raw field strings.
-    * Use with caution to avoid SQL injection.
-    * @param fields - The raw field(s) to be returned after the update.
-    * @returns The current UpdateQuery instance for method chaining.
-    */
+   * Specifies raw RETURNING fields for the update without escaping.
+   * Accepts either a single raw field string or an array of raw field strings.
+   * Use with caution to avoid SQL injection.
+   * @param fields - The raw field(s) to be returned after the update.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
   public returningRaw(fields: string | string[]): this {
     this.returnAll = false;
     if (Array.isArray(fields)) {
@@ -260,12 +266,12 @@ export default class UpdateQuery extends DmlQueryDefinition {
   }
 
   /**
-    * Adds additional raw RETURNING fields to the update without escaping.
-    * Accepts either a single raw field string or an array of raw field strings.
-    * Use with caution to avoid SQL injection.
-    * @param field - The raw field(s) to be added to the RETURNING clause.
-    * @returns The current UpdateQuery instance for method chaining.
-    */
+   * Adds additional raw RETURNING fields to the update without escaping.
+   * Accepts either a single raw field string or an array of raw field strings.
+   * Use with caution to avoid SQL injection.
+   * @param field - The raw field(s) to be added to the RETURNING clause.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
   public addReturningRaw(field: string | string[]): this {
     this.returnAll = false;
     if (Array.isArray(field)) {
@@ -403,9 +409,10 @@ export default class UpdateQuery extends DmlQueryDefinition {
       usingClause,
       joinClauses,
       whereClause,
-      returningClause || (this.returnAll ? 'RETURNING *' : '')
-    ].filter(part => part !== '')
-      .join('\n');
+      returningClause || (this.returnAll ? "RETURNING *" : ""),
+    ]
+      .filter((part) => part !== "")
+      .join("\n");
 
     this.builtQuery = SqlEscaper.appendSchemas(this.builtQuery, this.schemas);
 
@@ -490,7 +497,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
       ? this.whereStatement.clone()
       : null;
     cloned.returningFields = [...this.returningFields];
-    cloned.ctes = this.ctes ? new CteMaker(...this.ctes['ctes']) : null;
+    cloned.ctes = this.ctes ? new CteMaker(...this.ctes["ctes"]) : null;
     cloned.returnAll = this.returnAll;
     return cloned;
   }
