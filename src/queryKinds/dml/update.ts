@@ -198,7 +198,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
    * @returns The current UpdateQuery instance for method chaining.
    */
   public useStatement(
-    statement: (stmt: Statement) => Statement | undefined,
+    statement: (stmt: Statement) => Statement | undefined | void,
   ): this {
     const stmt = new Statement();
     const newStmt = statement(stmt) || stmt;
