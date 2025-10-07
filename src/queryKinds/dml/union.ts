@@ -279,7 +279,7 @@ export default class Union extends DmlQueryDefinition {
    * @returns The current Union instance for method chaining.
    */
   public useStatement(
-    statement: (stmt: Statement) => Statement | undefined,
+    statement: (stmt: Statement) => Statement | undefined | void,
   ): Union {
     const stmt = new Statement();
     const newStatement = statement(stmt) || stmt;
