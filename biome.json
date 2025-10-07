@@ -20,7 +20,8 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "off",
-        "useIterableCallbackReturn": "off"
+        "useIterableCallbackReturn": "off",
+        "noConfusingVoidType": "off"
       },
       "style": {
         "noNonNullAssertion": "off"

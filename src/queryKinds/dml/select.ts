@@ -266,7 +266,7 @@ export default class SelectQuery extends DmlQueryDefinition {
    * @returns The current SelectQuery instance for chaining.
    */
   public useStatement(
-    statement: (stmt: Statement) => Statement | undefined,
+    statement: (stmt: Statement) => Statement | undefined | void,
   ): this {
     const stmt = new Statement();
     const newStmt = statement(stmt) || stmt;
@@ -296,7 +296,7 @@ export default class SelectQuery extends DmlQueryDefinition {
    * @returns The current SelectQuery instance for chaining.
    */
   public useHavingStatement(
-    statement: (stmt: Statement) => Statement | undefined,
+    statement: (stmt: Statement) => Statement | undefined | void,
   ): this {
     const stmt = new Statement();
     const newStmt = statement(stmt) || stmt;
