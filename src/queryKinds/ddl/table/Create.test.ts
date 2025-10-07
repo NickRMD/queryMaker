@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import CreateTableQuery from "./Create.js";
 import Column from "../../../queryUtils/Column.js";
 import { Decimal, Varchar } from "../../../types/ColumnTypes.js";
+import QueryKind from "../../../types/QueryKind.js";
 
 
 describe('Create Table Query', () => {
@@ -100,5 +101,69 @@ describe('Create Table Query', () => {
   it('should throw an error if no columns are defined', () => {
     const query = new CreateTableQuery('empty_table');
     expect(() => query.build()).toThrow('No columns defined for the table.');
+  });
+
+  it('should reset the query state', () => {
+    const query = new CreateTableQuery('temp_table')
+      .ifNotExists()
+      .addColumns([
+        Column('id', 'INT').primaryKey().notNull()
+      ]);
+
+    query.reset();
+
+    expect(() => query.build()).toThrow('Table name is not set.');
+  });
+
+  it('should return toSQL correctly', () => {
+    const query = new CreateTableQuery('logs')
+      .addColumns(Column('id', 'INT').primaryKey().notNull())
+      .addColumns(Column('message', Varchar(255)).notNull());
+
+    expect(query.toSQL()).toBe(
+      'CREATE TABLE "logs" (\n  id INT PRIMARY KEY,\n  message VARCHAR(255) NOT NULL\n);'
+    );
+  });
+
+  it('should be able to handle setting columns', () => {
+    const query = new CreateTableQuery('employees')
+      .setColumns([
+        Column('id', 'INT').primaryKey().notNull(),
+        Column('first_name', Varchar(50)).notNull(),
+        Column('last_name', Varchar(50)).notNull()
+      ]);
+
+    expect(query.build()).toBe(
+      'CREATE TABLE "employees" (\n  id INT PRIMARY KEY,\n  first_name VARCHAR(50) NOT NULL,\n  last_name VARCHAR(50) NOT NULL\n);'
+    );
+  });
+
+  it('should be able to return its columns array', () => {
+    const columns = [
+      Column('id', 'INT').primaryKey().notNull(),
+      Column('username', Varchar(50)).notNull()
+    ];
+    const query = new CreateTableQuery('accounts')
+      .setColumns(columns);
+
+    expect(query.columns).toEqual(columns);
+  });
+
+  it('should be able to set the table name later', () => {
+    const query = new CreateTableQuery()
+      .table('departments')
+      .addColumns([
+        Column('id', 'INT').primaryKey().notNull(),
+        Column('dept_name', Varchar(100)).notNull()
+      ]);
+
+    expect(query.build()).toBe(
+      'CREATE TABLE "departments" (\n  id INT PRIMARY KEY,\n  dept_name VARCHAR(100) NOT NULL\n);'
+    );
+  });
+
+  it('should return its kind', () => {
+    const query = new CreateTableQuery('audit');
+    expect(query.kind).toBe(QueryKind.CREATE_TABLE);
   });
 });

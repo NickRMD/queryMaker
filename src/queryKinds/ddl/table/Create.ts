@@ -17,7 +17,7 @@ export default class CreateTableQuery extends TableQueryDefinition {
     this.tableName = tableName
       ? SqlEscaper.escapeTableName(tableName, this.flavor)
       : "";
-    this.tableColumns = columns ?? [];
+    this.tableColumns = columns;
   }
 
   /**
@@ -98,7 +98,7 @@ export default class CreateTableQuery extends TableQueryDefinition {
     this.tableName = "";
     this.tableColumns = [];
     this.builtQuery = null;
-    this.ifNotExistsFlag = false;
+    this.resetIfNotExists();
     return this;
   }
 
@@ -107,7 +107,8 @@ export default class CreateTableQuery extends TableQueryDefinition {
    * @returns The SQL string representation of the CREATE TABLE query.
    */
   public toSQL(): string {
-    return this.build();
+    if(!this.builtQuery) this.build();
+    return this.builtQuery as string;
   }
 
   /**

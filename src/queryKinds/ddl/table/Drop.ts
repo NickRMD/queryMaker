@@ -15,6 +15,11 @@ export default class DropTableQuery extends TableQueryDefinition {
       : "";
   }
 
+  public ifExists(): this {
+    this.ifNotExistsFlag = true;
+    return this;
+  }
+
   /**
    * Builds the DROP TABLE SQL query string.
    * @param _deepAnalysis - Optional boolean to indicate if deep analysis is required (default is false).
@@ -39,7 +44,8 @@ export default class DropTableQuery extends TableQueryDefinition {
    * @returns A new DropTableQuery instance with the same properties as the current instance.
    */
   public clone(): DropTableQuery {
-    const cloned = new DropTableQuery(this.tableName);
+    const cloned = new DropTableQuery();
+    cloned.tableName = this.tableName;
     cloned.flavor = this.flavor;
     cloned.ifNotExistsFlag = this.ifNotExistsFlag;
     return cloned;
@@ -53,7 +59,7 @@ export default class DropTableQuery extends TableQueryDefinition {
   public reset(): this {
     this.tableName = "";
     this.builtQuery = null;
-    this.ifNotExistsFlag = false;
+    this.resetIfNotExists();
     return this;
   }
 
@@ -62,7 +68,8 @@ export default class DropTableQuery extends TableQueryDefinition {
    * @returns The SQL string representation of the DROP TABLE query.
    */
   public toSQL(): string {
-    return this.build();
+    if(!this.builtQuery) this.build();
+    return this.builtQuery as string;
   }
 
   /** Getter for the kind of query. */
