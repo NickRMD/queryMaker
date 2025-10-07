@@ -196,6 +196,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
     */
   public returnAllFields(): this {
     this.returnAll = true;
+    this.returningFields = [];
     return this;
   }
 

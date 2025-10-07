@@ -113,6 +113,7 @@ export default class InsertQuery extends DmlQueryDefinition {
     */
   public returnAllFields(): this {
     this.returnAll = true;
+    this.returningFields = [];
     return this;
   }
 

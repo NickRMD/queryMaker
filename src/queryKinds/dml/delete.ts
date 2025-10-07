@@ -128,6 +128,7 @@ export default class DeleteQuery extends DmlQueryDefinition {
     */
   public returnAllFields(): this {
     this.returnAll = true;
+    this.returningFields = [];
     return this;
   }
 
