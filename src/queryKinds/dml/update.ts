@@ -29,7 +29,8 @@ export default class UpdateQuery extends DmlQueryDefinition {
   private setValues: SetValue[] = [];
   /** RETURNING fields. */
   private returningFields: string[] = [];
-
+  /** Flag to indicate that all fields should be returned. */
+  private returnAll: boolean = false;
   /**
    * Creates an instance of UpdateQuery.
    * @param table - The name of the table to update.
@@ -205,23 +206,29 @@ export default class UpdateQuery extends DmlQueryDefinition {
   }
 
   /**
+   * Specifies that all fields should be returned after the update.
+   * This sets the RETURNING clause to '*'.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
+  public returnAllFields(): this {
+    this.returnAll = true;
+    this.returningFields = [];
+    return this;
+  }
+
+  /**
    * Specifies the RETURNING fields for the update.
    * Accepts either a single field name or an array of field names.
    * @param fields - The field(s) to be returned after the update.
    * @returns The current UpdateQuery instance for method chaining.
    */
   public returning(fields: string | string[]): this {
-    if (Array.isArray(fields)) {
-      this.returningFields = SqlEscaper.escapeSelectIdentifiers(
-        fields,
+    this.returningRaw(
+      SqlEscaper.escapeSelectIdentifiers(
+        Array.isArray(fields) ? fields : [fields],
         this.flavor,
-      );
-    } else {
-      this.returningFields = SqlEscaper.escapeSelectIdentifiers(
-        [fields],
-        this.flavor,
-      );
-    }
+      ),
+    );
     return this;
   }
 
@@ -231,15 +238,46 @@ export default class UpdateQuery extends DmlQueryDefinition {
    * @param field - The field(s) to be added to the RETURNING clause.
    * @returns The current UpdateQuery instance for method chaining.
    */
-  public addReturning(field: string | string[]): this {
-    if (Array.isArray(field)) {
-      this.returningFields.push(
-        ...SqlEscaper.escapeSelectIdentifiers(field, this.flavor),
-      );
+  public addReturning(fields: string | string[]): this {
+    this.addReturningRaw(
+      SqlEscaper.escapeSelectIdentifiers(
+        Array.isArray(fields) ? fields : [fields],
+        this.flavor,
+      ),
+    );
+    return this;
+  }
+
+  /**
+   * Specifies raw RETURNING fields for the update without escaping.
+   * Accepts either a single raw field string or an array of raw field strings.
+   * Use with caution to avoid SQL injection.
+   * @param fields - The raw field(s) to be returned after the update.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
+  public returningRaw(fields: string | string[]): this {
+    this.returnAll = false;
+    if (Array.isArray(fields)) {
+      this.returningFields = fields;
     } else {
-      this.returningFields.push(
-        ...SqlEscaper.escapeSelectIdentifiers([field], this.flavor),
-      );
+      this.returningFields = [fields];
+    }
+    return this;
+  }
+
+  /**
+   * Adds additional raw RETURNING fields to the update without escaping.
+   * Accepts either a single raw field string or an array of raw field strings.
+   * Use with caution to avoid SQL injection.
+   * @param field - The raw field(s) to be added to the RETURNING clause.
+   * @returns The current UpdateQuery instance for method chaining.
+   */
+  public addReturningRaw(field: string | string[]): this {
+    this.returnAll = false;
+    if (Array.isArray(field)) {
+      this.returningFields.push(...field);
+    } else {
+      this.returningFields.push(field);
     }
     return this;
   }
@@ -371,7 +409,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
       usingClause,
       joinClauses,
       whereClause,
-      returningClause,
+      returningClause || (this.returnAll ? "RETURNING *" : ""),
     ]
       .filter((part) => part !== "")
       .join("\n");
@@ -425,6 +463,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
     this.returningFields = [];
     this.builtQuery = null;
     this.ctes = null;
+    this.returnAll = false;
     this.schemas = [];
   }
 
@@ -459,6 +498,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
       : null;
     cloned.returningFields = [...this.returningFields];
     cloned.ctes = this.ctes ? new CteMaker(...this.ctes["ctes"]) : null;
+    cloned.returnAll = this.returnAll;
     return cloned;
   }
 }

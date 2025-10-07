@@ -197,4 +197,14 @@ describe('Insert Query', () => {
     expect(secondBuild.values).toEqual(['2024-01-01']);
   });
 
+  it('should support returning all with returnAllFields', () => {
+    const query = new InsertQuery('users')
+      .values({ name: 'Alice', age: 28 })
+      .returnAllFields()
+      .build();
+
+    expect(query.text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING *');
+    expect(query.values).toEqual(['Alice', 28]);
+  });
+
 });
