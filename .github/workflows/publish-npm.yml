@@ -63,6 +63,13 @@ jobs:
             "main")
               NPM_TAG="latest"
               VERSION=$PACKAGE_VERSION
+
+              # Find the latest tag matching this package and error if it already exists
+              LAST_TAG=$(git tag --list "v${PACKAGE_VERSION}" | sort -V | tail -n1)
+              if [ "$LAST_TAG" == "v${PACKAGE_VERSION}" ]; then
+                echo "Version $PACKAGE_VERSION already exists. Please update the version in package.json and jsr.json before publishing."
+                exit 1
+              fi
               ;;
             "rc"|"beta"|"next")
               IDENTIFIER=$BRANCH_NAME
@@ -96,6 +103,7 @@ jobs:
       - name: Update package version
         run: |
           pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+          ./scripts/update-jsr-version.sh ${{ steps.version.outputs.version }}
 
       - name: Create distribution archive
         run: |
@@ -105,11 +113,20 @@ jobs:
           # Create a zip archive as well for Windows users
           zip -r dist-${{ steps.version.outputs.version }}.zip dist/
 
+          # Create a compressed archive of the dist-qjs directory
+          tar -czf dist-qjs-${{ steps.version.outputs.version }}.tar.gz dist-qjs/
+
+          # Create a zip archive of the dist-qjs directory for Windows users
+          zip -r dist-qjs-${{ steps.version.outputs.version }}.zip dist-qjs
+
       - name: Publish to NPM
         run: |
           pnpm publish --tag ${{ steps.version.outputs.npm_tag }} --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to JSR
+        run: pnpx jsr publish --allow-dirty
 
       - name: Create GitHub Release (main branch only)
         if: github.ref == 'refs/heads/main'
@@ -121,6 +138,8 @@ jobs:
           artifacts: |
             dist-${{ steps.version.outputs.version }}.tar.gz
             dist-${{ steps.version.outputs.version }}.zip
+            dist-qjs-${{ steps.version.outputs.version }}.tar.gz
+            dist-qjs-${{ steps.version.outputs.version }}.zip
           body: |
             ## Changes
             
@@ -150,6 +169,8 @@ jobs:
           artifacts: |
             dist-${{ steps.version.outputs.version }}.tar.gz
             dist-${{ steps.version.outputs.version }}.zip
+            dist-qjs-${{ steps.version.outputs.version }}.tar.gz
+            dist-qjs-${{ steps.version.outputs.version }}.zip
           body: |
             ## ${{ steps.version.outputs.branch }} Release
 

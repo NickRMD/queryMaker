@@ -1,14 +1,14 @@
-import SelectQuery from "../queryKinds/dml/select.js";
-import Statement from "../statementMaker.js";
+import type SelectQuery from "../queryKinds/dml/select.js";
+import type Statement from "../statementMaker.js";
 
-type joinTypeBase = 'INNER' | 'LEFT' | 'RIGHT' | 'FULL';
+type joinTypeBase = "INNER" | "LEFT" | "RIGHT" | "FULL";
 
 export type joinType = Lowercase<joinTypeBase> | joinTypeBase;
 
 /**
-  * Join interface represents the base to a SQL JOIN clause.
-  * It includes the type of join, an optional alias, and the condition for the join.
-  */
+ * Join interface represents the base to a SQL JOIN clause.
+ * It includes the type of join, an optional alias, and the condition for the join.
+ */
 interface JoinBase {
   /** The type of join: INNER, LEFT, RIGHT, or FULL. */
   type: joinType;
@@ -19,9 +19,9 @@ interface JoinBase {
 }
 
 /**
-  * Join interface represents a SQL JOIN clause.
-  * It includes the type of join, the table to join, an optional alias, and the condition for the join.
-  */
+ * Join interface represents a SQL JOIN clause.
+ * It includes the type of join, the table to join, an optional alias, and the condition for the join.
+ */
 type JoinTable = JoinBase & {
   /** The name of the table to join. */
   table: string;
@@ -41,4 +41,3 @@ export function isJoinTable(join: Join): join is JoinTable {
 }
 
 export default Join;
-

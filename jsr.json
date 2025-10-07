@@ -1,0 +1,36 @@
+{
+  "name": "@fragmenta/sqm",
+  "version": "0.7.0",
+  "description": "A lightweight and flexible query maker library for building raw SQL queries in JavaScript.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./queryUtils": "./src/queryUtils/index.ts",
+    "./types": "./src/types/index.ts",
+    "./ddl": "./src/queryKinds/ddl/index.ts",
+    "./dml": "./src/queryKinds/dml/index.ts",
+    "./ddl/table": "./src/queryKinds/ddl/table/index.ts"
+  },
+  "publish": {
+    "include": [
+      "src",
+      "README.md",
+      "LICENSE.md"
+    ],
+    "exclude": [
+      "node_modules",
+      "dist",
+      "dist-qjs",
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "scripts",
+      "tsup.config.ts",
+      "tsup.config.qjs.ts",
+      "vitest.config.ts",
+      ".gitignore",
+      ".npmignore",
+      "package-lock.json",
+      "pnpm-lock.yaml"
+    ]
+  }
+}

@@ -1,11 +1,10 @@
-
-type DirectionBase = 'ASC' | 'DESC';
+type DirectionBase = "ASC" | "DESC";
 export type Direction = Lowercase<DirectionBase> | DirectionBase;
 
 /**
-  * OrderByField interface represents sorting criteria for database queries or data collections.
-  * It includes the field to sort by and the direction of sorting (ascending or descending).
-  */
+ * OrderByField interface represents sorting criteria for database queries or data collections.
+ * It includes the field to sort by and the direction of sorting (ascending or descending).
+ */
 export interface OrderByField {
   /** The field to sort by. */
   field: string;
@@ -15,9 +14,9 @@ export interface OrderByField {
 }
 
 /**
-  * OrderByColumn interface represents sorting criteria for database queries or data collections.
-  * It includes the column to sort by and the direction of sorting (ascending or descending).
-  */
+ * OrderByColumn interface represents sorting criteria for database queries or data collections.
+ * It includes the column to sort by and the direction of sorting (ascending or descending).
+ */
 export interface OrderByColumn {
   /** The column to sort by. */
   column: string;
@@ -26,10 +25,10 @@ export interface OrderByColumn {
   field?: never;
 }
 
-type OrderBy = OrderByField | OrderByColumn
+type OrderBy = OrderByField | OrderByColumn;
 
 export function isOrderByField(obj: any): obj is OrderByField {
-  return obj && typeof obj === 'object' && 'field' in obj && 'direction' in obj;
+  return obj && typeof obj === "object" && "field" in obj && "direction" in obj;
 }
 
 export default OrderBy;
