@@ -2,7 +2,6 @@ import type { ValidatorOptions } from "class-validator";
 // Import types only since they are used for type checking only
 // and zod is optional peer dependency
 import type z from "zod";
-import type { ZodObject } from "zod";
 import type CteMaker from "../../cteMaker.js";
 import deepEqual from "../../deepEqual.js";
 import { getClassValidator, getZod } from "../../getOptionalPackages.js";
@@ -60,7 +59,7 @@ export type QueryExecutor<T> = QueryExecutorObject<T> | FunctionDeclaration<T>;
  * SchemaType is a conditional type that infers the type of data based on the provided schema.
  * It supports both Zod schemas and class-validator classes.
  */
-type SchemaType<S> = S extends ZodObject
+type SchemaType<S> = S extends { safeParse: Function }
   ? z.infer<S>
   : S extends { new (): infer U }
     ? U
