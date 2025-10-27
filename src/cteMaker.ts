@@ -63,7 +63,7 @@ export class Cte {
    * @param query - The query defining the CTE.
    * @returns The current Cte instance for method chaining.
    */
-  public withQuery(query: SelectQuery): this {
+  public withQuery(query: QueryDefinition): this {
     this.query = query;
     return this;
   }
