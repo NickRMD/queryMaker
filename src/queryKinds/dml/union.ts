@@ -530,7 +530,7 @@ export default class Union extends DmlQueryDefinition {
 
     const finalValues = [...values, ...whereValues, ...havingValues];
 
-    if (!deepAnalysis) {
+    if (!this.disabledAnalysis) {
       const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
         union,
         finalValues,
