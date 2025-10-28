@@ -67,6 +67,9 @@ export default class Union extends DmlQueryDefinition {
   /** Having statement for the union query */
   private havingStatement: Statement | null = null;
 
+  /** Where statement for the union query */
+  private disabledAnalysis: boolean = false;
+
   /**
    * Checks if all added SELECT queries have the same number of fields.
    * This is important for ensuring that the UNION operation is valid.
@@ -527,19 +530,29 @@ export default class Union extends DmlQueryDefinition {
 
     const finalValues = [...values, ...whereValues, ...havingValues];
 
-    const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
-      union,
-      finalValues,
-      deepAnalysis,
-    );
+    if (!deepAnalysis) {
+      const analyzed = this.reAnalyzeParsedQueryForDuplicateParams(
+        union,
+        finalValues,
+        deepAnalysis,
+      );
 
-    this.builtQuery = analyzed.text;
-    this.builtParams = analyzed.values;
+      this.builtQuery = analyzed.text;
+      this.builtParams = analyzed.values;
 
-    return {
-      text: this.builtQuery,
-      values: this.builtParams,
-    };
+      return {
+        text: this.builtQuery,
+        values: this.builtParams,
+      };
+    } else {
+      this.builtQuery = union;
+      this.builtParams = finalValues;
+
+      return {
+        text: this.builtQuery,
+        values: this.builtParams,
+      };
+    }
   }
 
   /**
