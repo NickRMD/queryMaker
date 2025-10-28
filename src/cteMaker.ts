@@ -1,6 +1,5 @@
 import type QueryDefinition from "./queryKinds/dml/dmlQueryDefinition.js";
 import SelectQuery from "./queryKinds/dml/select.js";
-import Union from "./queryKinds/dml/union.js";
 
 /**
  * Cte represents a Common Table Expression (CTE) in SQL.
@@ -76,9 +75,7 @@ export class Cte {
    */
   public build(): { text: string; values: any[] } {
     const recursiveStr = this.recursiveCte ? "RECURSIVE " : "";
-    const query = this.query instanceof Union 
-      ? this.query.rawUnion()
-      : this.query.build();
+    const query = this.query.build();
     return {
       text: `${recursiveStr}${this.name} AS (\n${query.text}\n)`,
       values: query.values,
