@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import SelectQuery from "./select.js";
-import Statement from "../statementMaker.js";
-import { Cte } from "../cteMaker.js";
+import Statement from "../../statementMaker.js";
+import CteMaker, { Cte } from "../../cteMaker.js";
 
 describe('Select Query', () => {
   it('should generate correct SELECT SQL', () => {
@@ -466,6 +466,172 @@ describe('Select Query', () => {
     expect(clone.build().values).toEqual([true]);
     expect(query.build().text).toBe('SELECT\n "u"."id",\n "u"."name"\nFROM "users" AS u\nWHERE (u.age > $1)\nORDER BY "u"."name" ASC\nLIMIT 10 OFFSET 5');
     expect(query.build().values).toEqual([18]);
+  });
+
+
+  it('should support subQuery for joins', () => {
+    const subQuery = new SelectQuery('orders', 'o')
+      .select(['o.user_id'])
+      .addRawSelect('COUNT(o.id) AS order_count')
+      .where('o.status = ?', 'completed')
+      .groupBy('o.user_id');
+
+    const mainQuery = new SelectQuery('users', 'u')
+      .select(['u.id', 'u.name', 'sq.order_count'])
+      .join({
+        type: 'LEFT',
+        subQuery: subQuery,
+        alias: 'sq',
+        on: 'u.id = sq.user_id'
+      })
+      .where('u.active = ?', true)
+      .orderBy({ field: 'sq.order_count', direction: 'DESC' })
+      .limit(10);
+
+    const built = mainQuery.build();
+
+    expect(built.text).toBe('SELECT\n "u"."id",\n "u"."name",\n "sq"."order_count"\nFROM "users" AS u\nLEFT JOIN (\n SELECT\n  "o"."user_id",\n  COUNT(o.id) AS order_count\n FROM "orders" AS o\n WHERE (o.status = $1)\n GROUP BY "o"."user_id"\n) sq\n ON u.id = sq.user_id\nWHERE (u.active = $2)\nORDER BY "sq"."order_count" DESC\nLIMIT 10');
+    expect(built.values).toEqual(['completed', true]);
+
+
+    const subQuery2 = new SelectQuery('products', 'p')
+      .select(['p.category_id'])
+      .addRawSelect('AVG(p.price) AS avg_price')
+      .where('p.stock > ?', 0)
+      .groupBy('p.category_id');
+
+    const mainQuery2 = new SelectQuery('categories', 'c')
+      .select(['c.id', 'c.name', 'sq.avg_price'])
+      .join({
+        type: 'INNER',
+        subQuery: subQuery2,
+        alias: 'sq',
+        on: new Statement().and('c.id = sq.category_id').and('sq.avg_price > ?', 50)
+      })
+      .where('c.active = ?', true)
+      .orderBy({ field: 'sq.avg_price', direction: 'DESC' })
+      .limit(5);
+
+    const built2 = mainQuery2.build();
+
+    expect(built2.text).toBe('SELECT\n "c"."id",\n "c"."name",\n "sq"."avg_price"\nFROM "categories" AS c\nINNER JOIN (\n SELECT\n  "p"."category_id",\n  AVG(p.price) AS avg_price\n FROM "products" AS p\n WHERE (p.stock > $1)\n GROUP BY "p"."category_id"\n) sq\n ON (c.id = sq.category_id) AND (sq.avg_price > $2)\nWHERE (c.active = $3)\nORDER BY "sq"."avg_price" DESC\nLIMIT 5');
+    expect(built2.values).toEqual([0, 50, true]);
+  });
+
+
+  it('should support multiple subQuery joins', () => {
+    const ordersSubQuery = new SelectQuery('orders', 'o')
+      .select(['o.user_id'])
+      .addRawSelect('COUNT(o.id) AS order_count')
+      .where('o.status = ?', 'completed')
+      .groupBy('o.user_id');
+
+    const reviewsSubQuery = new SelectQuery('reviews', 'r')
+      .select(['r.user_id'])
+      .addRawSelect('AVG(r.rating) AS avg_rating')
+      .where('r.approved = ?', true)
+      .groupBy('r.user_id');
+
+    const mainQuery = new SelectQuery('users', 'u')
+      .select(['u.id', 'u.name', 'osq.order_count', 'rsq.avg_rating'])
+      .join({
+        type: 'LEFT',
+        subQuery: ordersSubQuery,
+        alias: 'osq',
+        on: 'u.id = osq.user_id'
+      })
+      .join({
+        type: 'LEFT',
+        subQuery: reviewsSubQuery,
+        alias: 'rsq',
+        on: 'u.id = rsq.user_id'
+      })
+      .where('u.active = ?', true)
+      .orderBy([
+        { field: 'osq.order_count', direction: 'DESC' },
+        { field: 'rsq.avg_rating', direction: 'DESC' }
+      ])
+      .limit(10);
+
+    const built = mainQuery.build();
+
+    expect(built.text).toBe('SELECT\n "u"."id",\n "u"."name",\n "osq"."order_count",\n "rsq"."avg_rating"\nFROM "users" AS u\nLEFT JOIN (\n SELECT\n  "o"."user_id",\n  COUNT(o.id) AS order_count\n FROM "orders" AS o\n WHERE (o.status = $1)\n GROUP BY "o"."user_id"\n) osq\n ON u.id = osq.user_id\nLEFT JOIN (\n SELECT\n  "r"."user_id",\n  AVG(r.rating) AS avg_rating\n FROM "reviews" AS r\n WHERE (r.approved = $2)\n GROUP BY "r"."user_id"\n) rsq\n ON u.id = rsq.user_id\nWHERE (u.active = $2)\nORDER BY "osq"."order_count" DESC, "rsq"."avg_rating" DESC\nLIMIT 10');
+    expect(built.values).toEqual(['completed', true]);
+  });
+
+  it('should support multiple CTEs', () => {
+    const activeUsersCte = new Cte(
+      'active_users',
+      new SelectQuery('users').where('active = ?', true).select(['id', 'name']),
+      false
+    );
+
+    const recentOrdersCte = new Cte(
+      'recent_orders',
+      new SelectQuery('orders').where('created_at > ?', '2023-01-01').select(['id', 'user_id', 'total']),
+      false
+    );
+
+    const mainQuery = new SelectQuery('active_users', 'au')
+      .with([activeUsersCte, recentOrdersCte])
+      .join({
+        type: 'INNER',
+        table: 'recent_orders',
+        alias: 'ro',
+        on: 'au.id = ro.user_id'
+      })
+      .select(['au.id', 'au.name', 'ro.total'])
+      .orderBy({ field: 'ro.total', direction: 'DESC' })
+      .limit(10);
+
+    const built = mainQuery.build();
+
+    expect(built.text).toBe('WITH active_users AS (\nSELECT\n "id",\n "name"\nFROM "users"\nWHERE (active = $1)\n), recent_orders AS (\nSELECT\n "id",\n "user_id",\n "total"\nFROM "orders"\nWHERE (created_at > $2)\n)\nSELECT\n "au"."id",\n "au"."name",\n "ro"."total"\nFROM "active_users" AS au\nINNER JOIN "recent_orders" ro\n ON au.id = ro.user_id\nORDER BY "ro"."total" DESC\nLIMIT 10');
+    expect(built.values).toEqual([true, '2023-01-01']);
+  });
+
+
+  it('should support multipe CTEs with subQuery joins', () => {
+    const activeUsersCte = new Cte(
+      'active_users',
+      new SelectQuery('users').where('active = ?', true).select(['id', 'name']),
+      false
+    );
+
+    const recentOrdersCte = new Cte(
+      'recent_orders',
+      new SelectQuery('orders').where('created_at > ?', '2023-01-01').select(['id', 'user_id', 'total']),
+      false
+    );
+
+    const ordersSubQuery = new SelectQuery('orders', 'o')
+      .select(['o.user_id'])
+      .addRawSelect('COUNT(o.id) AS order_count')
+      .where('o.status = ?', 'completed')
+      .groupBy('o.user_id');
+
+    const mainQuery = new SelectQuery('active_users', 'au')
+      .with([activeUsersCte, recentOrdersCte])
+      .join({
+        type: 'INNER',
+        subQuery: ordersSubQuery,
+        alias: 'osq',
+        on: 'au.id = osq.user_id'
+      })
+      .join({
+        type: 'INNER',
+        table: 'recent_orders',
+        alias: 'ro',
+        on: 'au.id = ro.user_id'
+      })
+      .select(['au.id', 'au.name', 'osq.order_count', 'ro.total'])
+      .orderBy({ field: 'ro.total', direction: 'DESC' })
+      .limit(10);
+
+    const built = mainQuery.build();
+
+    expect(built.text).toBe('WITH active_users AS (\nSELECT\n "id",\n "name"\nFROM "users"\nWHERE (active = $1)\n), recent_orders AS (\nSELECT\n "id",\n "user_id",\n "total"\nFROM "orders"\nWHERE (created_at > $2)\n)\nSELECT\n "au"."id",\n "au"."name",\n "osq"."order_count",\n "ro"."total"\nFROM "active_users" AS au\nINNER JOIN (\n SELECT\n  "o"."user_id",\n  COUNT(o.id) AS order_count\n FROM "orders" AS o\n WHERE (o.status = $3)\n GROUP BY "o"."user_id"\n) osq\n ON au.id = osq.user_id\nINNER JOIN "recent_orders" ro\n ON au.id = ro.user_id\nORDER BY "ro"."total" DESC\nLIMIT 10');
+    expect(built.values).toEqual([true, '2023-01-01', 'completed']);
   });
 
 });

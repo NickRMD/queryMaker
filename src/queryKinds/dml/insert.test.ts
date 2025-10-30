@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import InsertQuery from "./insert.js";
 import SelectQuery from "./select.js";
-import { Cte } from "../cteMaker.js";
+import { Cte } from "../../cteMaker.js";
 
 describe('Insert Query', () => {
   
@@ -195,6 +195,16 @@ describe('Insert Query', () => {
     const secondBuild = query.build();
     expect(secondBuild.text).toBe('WITH recent_employees AS (\nSELECT\n "name",\n "age"\nFROM "employees"\nWHERE (hired_at > $1)\n) \nINSERT INTO "users" ("name", "age")\nSELECT\n "name",\n "age"\nFROM "recent_employees"\nRETURNING "id", "name"');
     expect(secondBuild.values).toEqual(['2024-01-01']);
+  });
+
+  it('should support returning all with returnAllFields', () => {
+    const query = new InsertQuery('users')
+      .values({ name: 'Alice', age: 28 })
+      .returnAllFields()
+      .build();
+
+    expect(query.text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING *');
+    expect(query.values).toEqual(['Alice', 28]);
   });
 
 });
