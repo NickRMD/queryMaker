@@ -37,8 +37,10 @@ export class ColumnType {
    * @param property - The property to add.
    * @returns The current instance for method chaining.
    */
-  public addProperty(property: string): this {
-    this.properties.push(property);
+  public addProperty(
+    property: string | { toString(): string },
+  ): this {
+    this.properties.push(property.toString());
     return this;
   }
 
@@ -90,6 +92,8 @@ export class ColumnDefinition {
   private checkCondition?: string;
   /** Foreign key constraint details, if any. */
   private foreignKey: ForeignKey | null = null;
+  /** Drop default value flag */
+  private dropDefault: boolean = false;
 
   constructor(
     name: string | null = null,
@@ -105,6 +109,15 @@ export class ColumnDefinition {
     } else {
       this.type = null;
     }
+  }
+
+  /**
+   * Marks the column to drop its default value.
+   * @returns The current instance for method chaining.
+   */
+  public dropDefaultValue(): this {
+    this.dropDefault = true;
+    return this;
   }
 
   /**
@@ -245,7 +258,7 @@ export class ColumnDefinition {
       }
     }
 
-    if (this.defaultValue !== undefined) {
+    if (this.defaultValue !== undefined && !forAdding) {
       parts.push(`DEFAULT ${this.defaultValue}`);
     }
 
@@ -253,7 +266,7 @@ export class ColumnDefinition {
       parts.push(`CHECK (${this.checkCondition})`);
     }
 
-    if (this.foreignKey) {
+    if (this.foreignKey && !forAdding) {
       let fkPart = `REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})`;
       if (this.foreignKey.onDelete) {
         fkPart += ` ON DELETE ${this.foreignKey.onDelete}`;
@@ -267,27 +280,31 @@ export class ColumnDefinition {
     return parts.join(" ");
   }
 
-  public buildToAdd(tableName: string): string[] {
-    const addColumn = `ALTER TABLE ${tableName} ADD COLUMN ${this.build(true)}`;
+  public buildToAdd(tableNameEntry: string): string[] {
+    let tableName = tableNameEntry.trim();
+    if (tableName.startsWith('"') && tableName.endsWith('"')) {
+      tableName = tableName.slice(1, -1);
+    }
+    const addColumn = `ALTER TABLE ${tableNameEntry} ADD COLUMN ${this.build(true)}`;
     const addColumnNullability = this.isNullable
-      ? `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} DROP NOT NULL`
-      : `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} SET NOT NULL`;
+      ? `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} DROP NOT NULL`
+      : `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} SET NOT NULL`;
     const addColumnDefault =
       this.defaultValue !== undefined
-        ? `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} SET DEFAULT ${this.defaultValue}`
+        ? `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} SET DEFAULT ${this.defaultValue}`
         : "";
     const addColumnCheck =
       this.checkCondition !== undefined
-        ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_check CHECK (${this.checkCondition})`
+        ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_check CHECK (${this.checkCondition})`
         : "";
     const addColumnPrimaryKey = this.isPrimaryKey
-      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_pkey PRIMARY KEY (${this.name})`
+      ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_pkey PRIMARY KEY (${this.name})`
       : "";
     const addColumnUnique = this.isUnique
-      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_unique UNIQUE (${this.name})`
+      ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_unique UNIQUE (${this.name})`
       : "";
     const addForeignKey = this.foreignKey
-      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_fkey FOREIGN KEY (${this.name}) REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})` +
+      ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_fkey FOREIGN KEY (${this.name}) REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})` +
         (this.foreignKey.onDelete
           ? ` ON DELETE ${this.foreignKey.onDelete}`
           : "") +
@@ -309,31 +326,40 @@ export class ColumnDefinition {
     return additions;
   }
 
-  public buildToAlter(tableName: string, previousName?: string): string[] {
+  public buildToAlter(tableNameEntry: string, previousName?: string): string[] {
+    
+    let tableName = tableNameEntry.trim();
+
+    if (tableName.startsWith('"') && tableName.endsWith('"')) {
+      tableName = tableName.slice(1, -1);
+    }
+
     const alterColumnName =
-      previousName !== this.name
-        ? `ALTER TABLE ${tableName} RENAME COLUMN ${previousName} TO ${this.name}`
+      (previousName !== this.name && previousName)
+        ? `ALTER TABLE ${tableNameEntry} RENAME COLUMN ${previousName} TO ${this.name}`
         : "";
-    const alterColumnType = `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} TYPE ${this.type?.toString()}`;
+    const alterColumnType = `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} TYPE ${this.type?.toString()}`;
     const alterColumnNullability = this.isNullable
-      ? `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} DROP NOT NULL`
-      : `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} SET NOT NULL`;
+      ? `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} DROP NOT NULL`
+      : `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} SET NOT NULL`;
     const alterColumnDefault =
       this.defaultValue !== undefined
-        ? `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} SET DEFAULT ${this.defaultValue}`
-        : `ALTER TABLE ${tableName} ALTER COLUMN ${this.name} DROP DEFAULT`;
+        ? `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} SET DEFAULT ${this.defaultValue}`
+        : this.dropDefault
+          ? `ALTER TABLE ${tableNameEntry} ALTER COLUMN ${this.name} DROP DEFAULT`
+          : "";
     const alterColumnCheck =
       this.checkCondition !== undefined
-        ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_check CHECK (${this.checkCondition})`
+        ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_check CHECK (${this.checkCondition})`
         : "";
     const alterColumnPrimaryKey = this.isPrimaryKey
-      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_pkey PRIMARY KEY (${this.name})`
+      ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_pkey PRIMARY KEY (${this.name})`
       : "";
     const alterColumnUnique = this.isUnique
-      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_unique UNIQUE (${this.name})`
+      ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_unique UNIQUE (${this.name})`
       : "";
     const alterForeignKey = this.foreignKey
-      ? `ALTER TABLE ${tableName} ADD CONSTRAINT ${this.name}_fkey FOREIGN KEY (${this.name}) REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})` +
+      ? `ALTER TABLE ${tableNameEntry} ADD CONSTRAINT ${tableName}_${this.name}_fkey FOREIGN KEY (${this.name}) REFERENCES ${this.foreignKey.table}(${this.foreignKey.column})` +
         (this.foreignKey.onDelete
           ? ` ON DELETE ${this.foreignKey.onDelete}`
           : "") +
