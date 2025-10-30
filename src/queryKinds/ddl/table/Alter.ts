@@ -153,7 +153,7 @@ export default class AlterTableQuery extends TableQueryDefinition {
    * Gets the kind of query.
    * @returns The kind of query, which is 'ALTER_TABLE' for this class.
    */
-  public get kind() {
+  public get kind(): QueryKind {
     return QueryKind.ALTER_TABLE;
   }
 
@@ -200,7 +200,7 @@ export default class AlterTableQuery extends TableQueryDefinition {
    * @throws Error if the query has not been built yet.
    */
   public toSQL(): string[] {
-    if (this.builtQuery) this.build();
+    if (!this.builtQuery) this.build();
     return this.builtQuery as string[];
   }
 
@@ -209,7 +209,8 @@ export default class AlterTableQuery extends TableQueryDefinition {
    * @returns A new AlterTableQuery instance with the same properties as the current instance.
    */
   public clone(): AlterTableQuery {
-    const cloned = new AlterTableQuery(this.tableName);
+    const cloned = new AlterTableQuery();
+    cloned.tableName = this.tableName;
     cloned.flavor = this.flavor;
     cloned.columnsToAdd = [...this.columnsToAdd];
     cloned.columnsToAlter = new Map(this.columnsToAlter);
