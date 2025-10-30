@@ -17,7 +17,12 @@
     "declarationMap": true,
 
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
+    // Needs explicit return types on functions and class methods
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
 
     // Style Options
     "noUnusedLocals": true,

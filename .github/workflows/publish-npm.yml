@@ -6,7 +6,7 @@ on:
       - main
       - rc
       - beta
-      - dev
+      - next 
   workflow_dispatch:
 
 jobs:
@@ -25,14 +25,32 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
 
       - name: Build project
-        run: npm run build:prod
+        run: pnpm build:prod
 
       - name: Determine version and tag
         id: version
@@ -45,8 +63,15 @@ jobs:
             "main")
               NPM_TAG="latest"
               VERSION=$PACKAGE_VERSION
+
+              # Find the latest tag matching this package and error if it already exists
+              LAST_TAG=$(git tag --list "v${PACKAGE_VERSION}" | sort -V | tail -n1)
+              if [ "$LAST_TAG" == "v${PACKAGE_VERSION}" ]; then
+                echo "Version $PACKAGE_VERSION already exists. Please update the version in package.json and jsr.json before publishing."
+                exit 1
+              fi
               ;;
-            "rc"|"beta"|"dev")
+            "rc"|"beta"|"next")
               IDENTIFIER=$BRANCH_NAME
               NPM_TAG=$BRANCH_NAME
 
@@ -77,13 +102,31 @@ jobs:
 
       - name: Update package version
         run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+          pnpm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+          ./scripts/update-jsr-version.sh ${{ steps.version.outputs.version }}
+
+      - name: Create distribution archive
+        run: |
+          # Create a compressed archive of the dist directory
+          tar -czf dist-${{ steps.version.outputs.version }}.tar.gz dist/
+          
+          # Create a zip archive as well for Windows users
+          zip -r dist-${{ steps.version.outputs.version }}.zip dist/
+
+          # Create a compressed archive of the dist-qjs directory
+          tar -czf dist-qjs-${{ steps.version.outputs.version }}.tar.gz dist-qjs/
+
+          # Create a zip archive of the dist-qjs directory for Windows users
+          zip -r dist-qjs-${{ steps.version.outputs.version }}.zip dist-qjs
 
       - name: Publish to NPM
         run: |
-          npm publish --tag ${{ steps.version.outputs.npm_tag }}
+          pnpm publish --tag ${{ steps.version.outputs.npm_tag }} --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to JSR
+        run: pnpx jsr publish --allow-dirty
 
       - name: Create GitHub Release (main branch only)
         if: github.ref == 'refs/heads/main'
@@ -92,6 +135,11 @@ jobs:
           tag: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           commit: ${{ github.sha }}
+          artifacts: |
+            dist-${{ steps.version.outputs.version }}.tar.gz
+            dist-${{ steps.version.outputs.version }}.zip
+            dist-qjs-${{ steps.version.outputs.version }}.tar.gz
+            dist-qjs-${{ steps.version.outputs.version }}.zip
           body: |
             ## Changes
             
@@ -102,18 +150,27 @@ jobs:
             npm install sqm@latest
             ```
 
+            Download the distribution archives:
+            - dist-${{ steps.version.outputs.version }}.tar.gz `compressed tar.gz archive`
+            - dist-${{ steps.version.outputs.version }}.zip `zip archive`
+
             For full changelog, see the commit history.
           draft: false
           prerelease: false
           generateReleaseNotes: true
 
-      - name: Create Pre-release (rc, beta, dev branches)
+      - name: Create Pre-release (rc, beta, next branches)
         if: github.ref != 'refs/heads/main'
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ steps.version.outputs.version }}
           name: ${{ steps.version.outputs.branch }} v${{ steps.version.outputs.version }}
           commit: ${{ github.sha }}
+          artifacts: |
+            dist-${{ steps.version.outputs.version }}.tar.gz
+            dist-${{ steps.version.outputs.version }}.zip
+            dist-qjs-${{ steps.version.outputs.version }}.tar.gz
+            dist-qjs-${{ steps.version.outputs.version }}.zip
           body: |
             ## ${{ steps.version.outputs.branch }} Release
 
@@ -123,6 +180,10 @@ jobs:
             ```bash
             npm install sqm@${{ steps.version.outputs.npm_tag }}
             ```
+
+            Download the distribution archives:
+            - dist-${{ steps.version.outputs.version }}.tar.gz `compressed tar.gz archive`
+            - dist-${{ steps.version.outputs.version }}.zip `zip archive`
 
             **⚠️ Warning**: This is a pre-release version and may contain bugs or incomplete features.
           draft: false

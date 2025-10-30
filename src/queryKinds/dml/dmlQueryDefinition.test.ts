@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import SelectQuery from "./select.js";
-import sqlFlavor from "../types/sqlFlavor.js";
+import sqlFlavor from "../../types/sqlFlavor.js";
 import UpdateQuery from "./update.js";
 import InsertQuery from "./insert.js";
 import DeleteQuery from "./delete.js";
@@ -9,7 +9,7 @@ import { IsDefined, IsNumber, IsString } from "class-validator";
 import { Transform } from "class-transformer";
 
 
-describe('Query Definition', () => {
+describe('DML Query Definition', () => {
   it('should be able to set sql flavor', () => {
     const query = new SelectQuery()
       .from('users')
@@ -199,5 +199,126 @@ describe('Query Definition', () => {
     await expect(async () => {
       await queryClass.execute(executorFunction);
     }).rejects.toThrowError();
+  });
+
+  it('should handle execution with strange runner outputs', async () => {
+    const query = new InsertQuery('users')
+      .values({ name: 'John', age: 30 })
+      .returning(['id', 'name', 'age']);
+
+
+    const executorFunctionUndefined = async (text: string, values: any[]) => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return [
+        [{ id: 1, name: 'John', age: 30 }], 1
+      ];
+    }
+
+    const resultUndefined = await query.execute(executorFunctionUndefined);
+    expect(resultUndefined).toEqual([{ id: 1, name: 'John', age: 30 }]);
+
+    const executorFunctionNoArray = async (text: string, values: any[]): Promise<any> => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return { id: 1, name: 'John', age: 30 };
+    }
+
+    const resultNoArray = await query.execute(executorFunctionNoArray);
+    expect(resultNoArray).toEqual([{ id: 1, name: 'John', age: 30 }]);
+
+    const executorFunctionNull = async (text: string, values: any[]): Promise<any> => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return null;
+    }
+
+    const resultNull = await query.execute(executorFunctionNull);
+    expect(resultNull).toEqual([]);
+
+    const executorFunctionRowsUndefined = async (text: string, values: any[]): Promise<any> => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return { rows: undefined };
+    }
+
+    const resultRowsUndefined = await query.execute(executorFunctionRowsUndefined);
+    expect(resultRowsUndefined).toEqual([]);
+
+    const executorFunctionRowsNoArray = async (text: string, values: any[]): Promise<any> => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return { rows: { id: 1, name: 'John', age: 30 } };
+    }
+
+    const resultRowsNoArray = await query.execute(executorFunctionRowsNoArray);
+    expect(resultRowsNoArray).toEqual([
+      { id: 1, name: 'John', age: 30 }
+    ]);
+
+    const executorFunctionRows1 = async (text: string, values: any[]): Promise<any> => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return { rows: 1 };
+    }
+
+    await expect(async () => {
+      await query.execute(executorFunctionRows1);
+    }).rejects.toThrowError('Invalid rows property in result from query executor function.');
+
+    const executorFunction1 = async (text: string, values: any[]): Promise<any> => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return 1;
+    }
+
+    await expect(async () => {
+      await query.execute(executorFunction1);
+    }).rejects.toThrowError('Invalid result from query executor function.');
+  });
+
+  it('should support getting one and getting many', async () => {
+    const query = new InsertQuery('users')
+      .values({ name: 'John', age: 30 })
+      .returning(['id', 'name', 'age']);
+
+    const executorFunction = async (text: string, values: any[]) => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return [{ id: 1, name: 'John', age: 30 }, { id: 2, name: 'Jane', age: 25 }];
+    }
+
+    const resultMany = await query.getMany(executorFunction);
+    expect(resultMany).toEqual([{ id: 1, name: 'John', age: 30 }, { id: 2, name: 'Jane', age: 25 }]);
+
+    const resultOne = await query.getOne(executorFunction);
+    expect(resultOne).toEqual({ id: 1, name: 'John', age: 30 });
+
+    const executorFunctionEmpty = async (text: string, values: any[]) => {
+      expect(text).toBe('INSERT INTO "users" ("name", "age") VALUES ($1, $2)\nRETURNING "id", "name", "age"');
+      expect(values).toEqual(['John', 30]);
+      return [];
+    }
+
+    const resultManyEmpty = await query.getMany(executorFunctionEmpty);
+    expect(resultManyEmpty).toEqual([]);
+
+    const resultOneEmpty = await query.getOne(executorFunctionEmpty);
+    expect(resultOneEmpty).toBeNull();
+
+    // In select queries it should add limit of 1
+    const selectQuery = new SelectQuery()
+      .from('users')
+      .select(['id', 'name', 'age'])
+      .where('age > ?', 18);
+
+    const executorFunctionSelect = async (text: string, values: any[]) => {
+      expect(text).toBe('SELECT\n "id",\n "name",\n "age"\nFROM "users"\nWHERE (age > $1)\nLIMIT 1');
+      expect(values).toEqual([18]);
+      return [{ id: 1, name: 'John', age: 30 }, { id: 2, name: 'Jane', age: 25 }];
+    }
+
+    const resultOneSelect = await selectQuery.getOne(executorFunctionSelect);
+    expect(resultOneSelect).toEqual({ id: 1, name: 'John', age: 30 });
   });
 });
