@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import Union from "./union.js";
-import Query from "../queryMaker.js";
-import Statement from "../statementMaker.js";
+import Query from "../../queryMaker.js";
+import Statement from "../../statementMaker.js";
 
 describe("Union Query", () => {
   it('should create a UNION query with two SELECT statements', () => {
@@ -383,6 +383,108 @@ describe("Union Query", () => {
     // Original should remain unchanged
     const rebuiltOriginal = union.build();
     expect(rebuiltOriginal).toEqual(built);
+  });
+
+  it('should support custom select clause', () => {
+    const select1 = Query.select
+      .from("table1")
+      .select(["column1", "column2"])
+      .where("column1 = ?", "value1");
+
+    const select2 = Query.select
+      .from("table2")
+      .select(["column1", "column2"])
+      .where("column2 = ?", "value2");
+
+    const unionQuery = new Union()
+      .addMany([
+        {
+          query: select1,
+          type: 'union'
+        }, 
+        {
+          query: select2,
+          type: 'union all'
+        }
+      ])
+      .as('union_table')
+      .select('column1')
+      .addSelect('column2')
+      .addRawSelect('COUNT(column2) AS count_column2')
+      .groupBy('column1')
+      .build();
+
+    expect(unionQuery.text).toBe('SELECT\n "column1",\n "column2",\n COUNT(column2) AS count_column2\n FROM (\n (SELECT\n  "column1",\n  "column2"\n FROM "table1"\n WHERE (column1 = $1))\n\n UNION ALL\n\n (SELECT\n  "column1",\n  "column2"\n FROM "table2"\n WHERE (column2 = $2))\n) AS union_table\nGROUP BY "column1"');
+    expect(unionQuery.values).toEqual(['value1', 'value2']);
+  });
+
+  it('should support raw select clause', () => {
+    const select1 = Query.select
+      .from("table1")
+      .select(["column1", "column2"])
+      .where("column1 = ?", "value1");
+
+    const select2 = Query.select
+      .from("table2")
+      .select(["column1", "column2"])
+      .where("column2 = ?", "value2");
+
+    const unionQuery = new Union()
+      .addMany([
+        {
+          query: select1,
+          type: 'union'
+        }, 
+        {
+          query: select2,
+          type: 'union all'
+        }
+      ])
+      .as('union_table')
+      .rawSelect('column1')
+      .addSelect([
+        'column2',
+      ])
+      .rawSelect([
+        'column1',
+        'column2',
+        'COUNT(column2) AS count_column2'
+      ])
+      .addRawSelect('COUNT(column2) AS count_column2')
+      .select([
+        'column1',
+        'column2'
+      ])
+      .groupBy('column1')
+      .build();
+
+    expect(unionQuery.text).toBe('SELECT\n "column1",\n "column2"\n FROM (\n (SELECT\n  "column1",\n  "column2"\n FROM "table1"\n WHERE (column1 = $1))\n\n UNION ALL\n\n (SELECT\n  "column1",\n  "column2"\n FROM "table2"\n WHERE (column2 = $2))\n) AS union_table\nGROUP BY "column1"');
+    expect(unionQuery.values).toEqual(['value1', 'value2']);
+  });
+
+  it('should throw if selects have different selected lengths', () => {
+    const select1 = Query.select
+      .from("table1")
+      .select(["column1", "column2"])
+      .where("column1 = ?", "value1");
+
+    const select2 = Query.select
+      .from("table2")
+      .select(["column1", "column2", "column3"])
+      .where("column2 = ?", "value2");
+
+    const union = new Union()
+      .addManyOfType([select1, select2], 'union all')
+      .as('union_table');
+
+    expect(() => union.build()).toThrowError('All SELECT queries must have the same number of fields. Query at index 1 differs.');
+    expect(() => union.rawUnion()).toThrowError('All SELECT queries must have the same number of fields. Query at index 1 differs.');
+
+    try {
+      union.build();
+    } catch (e: any) {
+      expect(e.cause?.selectQuery).toStrictEqual(select2);
+    }
   });
 
 });

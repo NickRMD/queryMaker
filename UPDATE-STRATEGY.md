@@ -4,34 +4,34 @@ Fisrt I'll clarify branch names:
 - `main` is the production branch, it should always be stable and deployable.
 - `rc` is the release candidate branch, it is used for testing new features before they are merged into `main`.
 - `beta` is the beta branch, it is used for testing new features before they are merged into `rc`.
-- `dev` is the development branch, it is used for active development and may be unstable
+- `next` is the development branch, it is used for active development and may be unstable
 
 ## Update Strategy
 1. **Development Phase**:
-   - All new features and bug fixes are developed in the `dev` branch.
-   - Regular commits and pushes to `dev` to ensure changes are tracked.
+   - All new features and bug fixes are developed in the `next` branch.
+   - Regular commits and pushes to `next` to ensure changes are tracked.
    - Once a feature or fix is complete, it is merged into the `beta` branch for initial testing.
 2. **Beta Testing Phase**:
    - The `beta` branch is published into npm with the `beta` tag.
    - Beta testers and early adopters can install the beta version using `npm install sqm@beta`.
-   - Feedback from beta testers is collected and any issues are addressed in the `dev` branch.
+   - Feedback from beta testers is collected and any issues are addressed in the `next` branch.
    - Once the beta version is stable and all critical issues are resolved, it is merged into the `rc` branch.
 3. **Release Candidate Phase**:
    - The `rc` branch is published into npm with the `rc` tag.
    - Further testing is conducted to ensure stability and performance.
-   - Any final bugs or issues are fixed in the `dev` branch and merged into `rc`.
+   - Any final bugs or issues are fixed in the `next` branch and merged into `rc`.
    - Once the release candidate is deemed stable, it is merged into the `main` branch.
 4. **Production Release Phase**:
    - The `main` branch is published into npm with the `latest` tag.
    - Users can install the stable version using `npm install sqm`.
    - Post-release monitoring is conducted to ensure the release is functioning as expected.
-   - Any critical issues found in production are addressed in the `dev` branch and the cycle repeats.
+   - Any critical issues found in production are addressed in the `next` branch and the cycle repeats.
 
 ## Hotfixes
 In case of critical bugs in the `main` branch:
 1. Create a hotfix branch from `main`.
 2. Implement the fix and test it thoroughly.
-3. Merge the hotfix branch back into `main`, `rc`, and `dev` branches.
+3. Merge the hotfix branch back into `main`, `rc`, and `next` branches.
 4. Publish the updated `main` branch and other branches as necessary.
 5. Communicate the hotfix to users if necessary.
 

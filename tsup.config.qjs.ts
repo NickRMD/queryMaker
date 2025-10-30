@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  name: "For everything else",
+  name: "For QuickJS",
   entry: [
     "src/index.ts",
     "src/types/index.ts",
@@ -10,12 +10,12 @@ export default defineConfig({
     "src/queryKinds/ddl/index.ts",
     "src/queryKinds/ddl/table/index.ts",
   ],
-  target: ["esnext"],
+  target: ["es2023"],
   platform: "neutral",
-  format: ["cjs", "esm"],
+  format: ["esm"],
   ignoreWatch: ["**/*.test.ts", "**/*.spec.ts"],
   dts: true,
-  outDir: "dist",
+  outDir: "dist-qjs",
   clean: true,
   treeshake: "smallest",
   minifyIdentifiers: true,
