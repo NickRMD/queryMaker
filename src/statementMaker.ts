@@ -60,6 +60,7 @@ export default class Statement {
   /**
    * Creates an instance of the Statement class.
    * @param initialOffset - An optional offset to start the parameter index from.
+   * @param reparseOnChange - An optional flag to enable reparsing on changes (default is false).
    * This is useful when combining multiple statements to ensure unique placeholders.
    */
   constructor(initialOffset = 0, reparseOnChange = false) {
