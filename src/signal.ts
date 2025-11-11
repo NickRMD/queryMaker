@@ -28,6 +28,7 @@ export default class Signal<T = null> {
   /**
    * Creates a new Signal instance with an initial value.
    * @param initialValue - The initial value of the signal.
+   * @param immediate - If true, subscribers are notified immediately upon subscription.
    */
   constructor(initialValue: T | null = null, immediate: boolean = false) {
     this._value = initialValue;
@@ -37,6 +38,7 @@ export default class Signal<T = null> {
   /**
    * Creates a new Signal instance with an initial value.
    * @param initialValue - The initial value of the signal.
+   * @param immediate - If true, subscribers are notified immediately upon subscription.
    * @returns A new Signal instance.
    */
   public static create<U>(

@@ -95,6 +95,29 @@ export default class Union extends DmlQueryDefinition {
   }
 
   /**
+   * This method checks if the union build is valid.
+   * It throws errors if no SELECT queries have been added
+   * or if the SELECT queries do not have the same number of fields.
+   * @throws Error if no SELECT queries have been added to the union
+   * @throws Error if the SELECT queries do not have the same number of fields
+   * @private
+   */
+  private errorIfBuildIsInvalid() {
+    if (this.selectQueries.length === 0) {
+        throw new Error("No SELECT queries added to the UNION.");
+    }
+
+    const differingIndex = this.allSelectsHaveSameNumberOfFields();
+    if (differingIndex !== null) {
+        console.log("This is erroring out");
+        throw new Error(
+            `All SELECT queries must have the same number of fields. Query at index ${differingIndex} differs.`,
+            { cause: { selectQuery: this.selectQueries[differingIndex]?.query } },
+        );
+    }
+  }
+
+  /**
    * Make the union without selecting from it
    * Useful when the raw union is needed as a subquery
    * @throws Error if no SELECT queries have been added to the union
@@ -102,18 +125,7 @@ export default class Union extends DmlQueryDefinition {
    * @returns An object containing the raw SQL text of the union and its parameter values.
    */
   public rawUnion(): { text: string; values: any[] } {
-    if (this.selectQueries.length === 0) {
-      throw new Error("No SELECT queries added to the UNION.");
-    }
-
-    const differingIndex = this.allSelectsHaveSameNumberOfFields();
-    if (differingIndex !== null) {
-      console.log("This is erroring out");
-      throw new Error(
-        `All SELECT queries must have the same number of fields. Query at index ${differingIndex} differs.`,
-        { cause: { selectQuery: this.selectQueries[differingIndex]?.query } },
-      );
-    }
+    this.errorIfBuildIsInvalid();
 
     let unionItself: string = "";
     const values: any[] = [];
@@ -285,9 +297,7 @@ export default class Union extends DmlQueryDefinition {
     statement: (stmt: Statement) => Statement | undefined | void,
   ): Union {
     const stmt = new Statement();
-    const newStatement = statement(stmt) || stmt;
-
-    this.whereStatement = newStatement;
+    this.whereStatement = statement(stmt) || stmt;
     return this;
   }
 
@@ -407,12 +417,10 @@ export default class Union extends DmlQueryDefinition {
    * @returns The current Union instance for method chaining.
    */
   public useHavingStatement(
-    statement: (stmt: Statement) => Statement | undefined,
+    statement: (stmt: Statement) => Statement | void,
   ): Union {
     const stmt = new Statement();
-    const newStatement = statement(stmt) || stmt;
-
-    this.havingStatement = newStatement;
+    this.havingStatement = statement(stmt) || stmt;
     return this;
   }
 
@@ -426,23 +434,12 @@ export default class Union extends DmlQueryDefinition {
    * @throws Error if no SELECT queries have been added to the union.
    */
   public build(deepAnalysis: boolean = false): { text: string; values: any[] } {
-    if (this.selectQueries.length === 0) {
-      throw new Error("No SELECT queries added to the UNION.");
-    }
-
-    const differingIndex = this.allSelectsHaveSameNumberOfFields();
-    if (differingIndex !== null) {
-      console.log("This is erroring out");
-      throw new Error(
-        `All SELECT queries must have the same number of fields. Query at index ${differingIndex} differs.`,
-        { cause: { selectQuery: this.selectQueries[differingIndex]?.query } },
-      );
-    }
+    this.errorIfBuildIsInvalid();
 
     let unionItself: string = "";
     const values: any[] = [];
 
-    let selectClause = "";
+    let selectClause;
     if (this.selectFields.length > 0) {
       selectClause = this.selectFields.join(",\n ");
     } else {

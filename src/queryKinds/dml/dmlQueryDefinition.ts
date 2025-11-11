@@ -8,7 +8,7 @@ import { getClassValidator, getZod } from "../../getOptionalPackages.js";
 import SqlEscaper from "../../sqlEscaper.js";
 import type Statement from "../../statementMaker.js";
 import type Join from "../../types/Join.js";
-import { isJoinTable } from "../../types/Join.js";
+import { isJoinTable } from "../../types";
 import type QueryKind from "../../types/QueryKind.js";
 import sqlFlavor from "../../types/sqlFlavor.js";
 

@@ -1,6 +1,6 @@
-import type { ColumnTypes } from "../types/ColumnTypes.js";
+import type { ColumnTypes } from "../types";
 import type ForeignKey from "../types/ForeignKey.js";
-import type { Actions } from "../types/ForeignKey.js";
+import type { Actions } from "../types";
 
 /**
  * Class representing a column type.

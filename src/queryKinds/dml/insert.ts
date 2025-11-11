@@ -299,7 +299,7 @@ export default class InsertQuery extends DmlQueryDefinition {
       if (selectColumns.length > 0 && columns.length === 0) {
         const parsedColumns = selectColumns.map((col) => {
           const regex =
-            /^(?:(?:"?[\w$]+"?\.)?"?([\w$]+)"?(?:\s+AS\s+"?([\w$]+)"?)?)$/i;
+            /^(?:"?[\w$]+"?\.)?"?([\w$]+)"?(?:\s+AS\s+"?([\w$]+)"?)?$/i;
           const match = col.match(regex);
           if (match) {
             return SqlEscaper.escapeIdentifier(

@@ -1,5 +1,5 @@
 import { Cte } from "./cteMaker.js";
-import { Table } from "./queryKinds/ddl/index.js";
+import { Table } from "./queryKinds/ddl";
 import DeleteQuery from "./queryKinds/dml/delete.js";
 import InsertQuery from "./queryKinds/dml/insert.js";
 import SelectQuery from "./queryKinds/dml/select.js";

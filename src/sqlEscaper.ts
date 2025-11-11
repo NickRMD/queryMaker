@@ -13,8 +13,10 @@ export default class SqlEscaper {
    * Escapes a given string value by wrapping it with the specified escape character
    * and replacing occurrences of the escape character within the value.
    * @param value - The string value to be escaped.
-   * @param escapeChar - The character used to escape the value (default is double quote `"`).
-   * @param escapeCharReplacement - The string to replace occurrences of the escape character (default is two double quotes `""`).
+   * @param escapeCharLeft - The character or regex used to escape the left side of the value (default is double quote `"`).
+   * @param escapeCharRight - The character or regex used to escape the right side of the value (default is the same as escapeCharLeft).
+   * @param escapeCharLeftReplacement - The string to replace occurrences of the left escape character (default is two double quotes `""`).
+   * @param escapeCharRightReplacement - The string to replace occurrences of the right escape character (default is the same as escapeCharLeftReplacement).
    * @returns The escaped string value.
    */
   public static escape(
@@ -112,6 +114,7 @@ export default class SqlEscaper {
         case sqlFlavor.mssql:
           return SqlEscaper.escape(identifier, "\\[", "]", "]]", "[[");
         default:
+          //noinspection ExceptionCaughtLocallyJS
           throw new Error(`Unsupported SQL flavor: ${flavor}`);
       }
     } catch (error) {
