@@ -104,7 +104,7 @@ export default class CteMaker {
   /**
    * The list of CTEs to be included in the SQL query.
    */
-  private ctes: Cte[] = [];
+  private readonly ctes: Cte[] = [];
 
   /**
    * Creates an instance of CteMaker.
