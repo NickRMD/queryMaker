@@ -2,9 +2,9 @@ import CteMaker, { type Cte } from "../../cteMaker.js";
 import SqlEscaper from "../../sqlEscaper.js";
 import Statement from "../../statementMaker.js";
 import type Join from "../../types/Join.js";
-import { isJoinTable } from "../../types/Join.js";
+import { isJoinTable } from "../../types";
 import type OrderBy from "../../types/OrderBy.js";
-import { isOrderByField } from "../../types/OrderBy.js";
+import { isOrderByField } from "../../types";
 import QueryKind from "../../types/QueryKind.js";
 import DmlQueryDefinition from "./dmlQueryDefinition.js";
 import Union from "./union.js";
@@ -319,7 +319,7 @@ export default class SelectQuery extends DmlQueryDefinition {
   }
 
   public parseOrderByObject(orderBy: OrderBy): OrderBy {
-    let field = "";
+    let field;
     if (isOrderByField(orderBy)) field = orderBy.field;
     else field = orderBy.column;
 
@@ -350,7 +350,7 @@ export default class SelectQuery extends DmlQueryDefinition {
    * @returns The current SelectQuery instance for chaining.
    */
   public limit(count: number): this {
-    if (typeof count !== "number" || count < 0 || !Number.isInteger(count)) {
+    if (typeof (count as any) !== "number" || count < 0 || !Number.isInteger(count)) {
       throw new Error("Limit must be a non-negative integer.");
     }
     this.limitCount = count;
@@ -363,7 +363,7 @@ export default class SelectQuery extends DmlQueryDefinition {
    * @returns The current SelectQuery instance for chaining.
    */
   public offset(count: number): this {
-    if (typeof count !== "number" || count < 0 || !Number.isInteger(count)) {
+    if (typeof (count as any) !== "number" || count < 0 || !Number.isInteger(count)) {
       throw new Error("Offset must be a non-negative integer.");
     }
     this.offsetCount = count;
@@ -377,11 +377,11 @@ export default class SelectQuery extends DmlQueryDefinition {
    * @returns The current SelectQuery instance for chaining.
    */
   public limitAndOffset(limit: number, offset: number): this {
-    if (typeof limit !== "number" || limit < 0 || !Number.isInteger(limit)) {
+    if (typeof (limit as any) !== "number" || limit < 0 || !Number.isInteger(limit)) {
       throw new Error("Limit must be a non-negative integer.");
     }
 
-    if (typeof offset !== "number" || offset < 0 || !Number.isInteger(offset)) {
+    if (typeof (offset as any) !== "number" || offset < 0 || !Number.isInteger(offset)) {
       throw new Error("Offset must be a non-negative integer.");
     }
 
@@ -482,7 +482,7 @@ export default class SelectQuery extends DmlQueryDefinition {
     const cloned = new SelectQuery();
     cloned.table = this.table;
     cloned.tableAlias = this.tableAlias;
-    this.groupBySelectFields = this.groupBySelectFields;
+    cloned.groupBySelectFields = this.groupBySelectFields;
     cloned.flavor = this.flavor;
     cloned.schemas = [...this.schemas];
     cloned.distinctSelect = this.distinctSelect;
@@ -629,7 +629,7 @@ export default class SelectQuery extends DmlQueryDefinition {
     let orderByClause = "";
     if (this.orderBys.length > 0) {
       const orders = this.orderBys.map((ob) => {
-        let field = "";
+        let field;
         if (isOrderByField(ob)) field = ob.field;
         else field = ob.column;
 

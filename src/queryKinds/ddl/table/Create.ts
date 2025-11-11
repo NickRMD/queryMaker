@@ -1,4 +1,4 @@
-import type { ColumnDefinition } from "../../../queryUtils/Column.js";
+import type { ColumnDefinition } from "../../../queryUtils";
 import SqlEscaper from "../../../sqlEscaper.js";
 import QueryKind from "../../../types/QueryKind.js";
 import TableQueryDefinition from "./tableColumnDefinition.js";

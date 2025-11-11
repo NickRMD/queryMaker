@@ -2,7 +2,7 @@ import CteMaker, { type Cte } from "../../cteMaker.js";
 import SqlEscaper from "../../sqlEscaper.js";
 import Statement from "../../statementMaker.js";
 import type Join from "../../types/Join.js";
-import { isJoinTable } from "../../types/Join.js";
+import { isJoinTable } from "../../types";
 import QueryKind from "../../types/QueryKind.js";
 import type SetValue from "../../types/SetValue.js";
 import DmlQueryDefinition from "./dmlQueryDefinition.js";
@@ -235,7 +235,7 @@ export default class UpdateQuery extends DmlQueryDefinition {
   /**
    * Adds additional RETURNING fields to the update.
    * Accepts either a single field name or an array of field names.
-   * @param field - The field(s) to be added to the RETURNING clause.
+   * @param fields - The field(s) to be added to the RETURNING clause.
    * @returns The current UpdateQuery instance for method chaining.
    */
   public addReturning(fields: string | string[]): this {
